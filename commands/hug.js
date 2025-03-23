@@ -26,13 +26,23 @@ module.exports = {
                 .setDescription('La personne à câliner')
                 .setRequired(true)),
     async execute(interaction) {
+        const allowedChannelId = '1353348735660195911'; // Remplace par l'ID du salon autorisé
+
+        // Vérifier si la commande est utilisée dans le bon salon
+        if (interaction.channel.id !== allowedChannelId) {
+            return interaction.reply({ 
+                content: 'Désolé, cette commande ne peut être utilisée que dans un salon spécifique !', 
+                ephemeral: true // Message visible uniquement par l'utilisateur
+            });
+        }
+
         const user = interaction.options.getUser('cible');
         const randomGif = hugGifs[Math.floor(Math.random() * hugGifs.length)];
 
         // Créer un embed avec le GIF uniquement
         const hugEmbed = new EmbedBuilder()
-            .setImage(randomGif) // Le GIF s'affiche directement dans l'embed
-            .setColor('#ff99cc'); // Couleur optionnelle (rose ici, tu peux changer)
+            .setImage(randomGif)
+            .setColor('#ff99cc');
 
         // Répondre avec le ping au-dessus de l'embed
         await interaction.reply({ content: `Voici un câlin pour toi, ${user} !`, embeds: [hugEmbed] });
