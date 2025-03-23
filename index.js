@@ -46,6 +46,6 @@ client.on('interactionCreate', async interaction => {
 app.get('/', (req, res) => res.send('Maid babe alive!'));
 
 // Lance le serveur Express
-app.listen(3000, () => console.log('Serveur Express démarré sur le port 3000'));
+app.listen(8000, () => console.log('Serveur Express démarré sur le port 8000'));
 
 client.login(process.env.TOKEN); // Récupère le token depuis .env ou Koyeb
