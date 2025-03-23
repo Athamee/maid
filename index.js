@@ -43,7 +43,7 @@ client.on('interactionCreate', async interaction => {
 });
 
 // Endpoint pour UptimeRobot
-app.get('/', (req, res) => res.send('Maid babe alive!'));
+app.get('/', (req, res) => res.send('Ta servante dévouée, Maid babe, est vivante !'));
 
 // Lance le serveur Express
 app.listen(8000, () => console.log('Serveur Express démarré sur le port 8000'));
