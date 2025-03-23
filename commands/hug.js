@@ -15,6 +15,10 @@ const hugGifs = [
     'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbGZ4MjgxMWowZHFqYm1mOHVoZHYza3ZnY2JkcGkxbm0zdzlrZXkyMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/mr8eXWPaLM2cw/giphy.gif',
     'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExa2Q3dnR6bTl0cWFsZHN1eHE2cW9jc3p0b2NvNjg5c2dmN3kyemg0ayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26gs6DXO9OPEUMuw8/giphy.gif',
     'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExOXpvcWF1bDM5NjJtazlqN2tmYW15Y2Rvcjh2NmViaz Aloha3xamdtdDByZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/JXLHs90j6WktQ1Ydl6/giphy.gif',
+    'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExMTNjaGtsdHIxa2RmYWllYW1qYzNhejhrcGFnY3VxNXF5ZmVnMDE0eCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/zhpxMXQSBpgPu/giphy.gif',
+    'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExNjdvcGQ4MnRrOXJ4YnJ3ejFjampobDd4ZHk4dXFnZzcxcWg2aWJnbiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12SvEOhOjPe3Yc/giphy.gif',
+    'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExNThuanlqbWUxMDFtemtuOHNyb2Ryano2b2g0c3puMDBheDc0ejNkYiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/8ptQAAlYqpUeA/giphy.gif',
+    'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDJubHp6bWgwMDRtemx4eGxsbm1uZjR1eWQzZGcwdHd1eTZuNW5yeSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/WMU7Mmg7HDzVe/giphy.gif',
 ];
 
 module.exports = {
