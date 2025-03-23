@@ -48,4 +48,8 @@ app.get('/', (req, res) => res.send('Ta servante dévouée, Maid babe, est vivan
 // Lance le serveur Express
 app.listen(8000, () => console.log('Serveur Express démarré sur le port 8000'));
 
-client.login(process.env.TOKEN); // Récupère le token depuis .env ou Koyeb
+// Connexion à Discord avec gestion d'erreur
+client.login(process.env.TOKEN).catch((error) => {
+    console.error('Erreur lors de la connexion à Discord :', error);
+    process.exit(1); // Quitte le processus en cas d'erreur
+});
