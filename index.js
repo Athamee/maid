@@ -40,7 +40,7 @@ const deployCommands = async () => {
     try {
         console.log('Déploiement des commandes Slash...');
         await rest.put(
-            Routes.applicationCommands(process.env.CLIENT_ID), // Déploie pour toutes les guilds
+            Routes.applicationCommands(process.env.ID_APP), // Déploie pour toutes les guilds
             { body: commands }
         );
         console.log('Commandes déployées avec succès !');
