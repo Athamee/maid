@@ -14,8 +14,6 @@ const hugGifs = [
     'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExdTZ0ZDBpZHRtajZjcmhycGg4c2NzZGpweXhvMmZ1bDU5ZHh3eDhmNiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12hAqqMqwgnV9C/giphy.gif',
     'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbGZ4MjgxMWowZHFqYm1mOHVoZHYza3ZnY2JkcGkxbm0zdzlrZXkyMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/mr8eXWPaLM2cw/giphy.gif',
     'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExa2Q3dnR6bTl0cWFsZHN1eHE2cW9jc3p0b2NvNjg5c2dmN3kyemg0ayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26gs6DXO9OPEUMuw8/giphy.gif',
-    // Ajoute d'autres GIFs ici si tu veux plus de variété
-    
 ];
 
 module.exports = {
@@ -30,12 +28,12 @@ module.exports = {
         const user = interaction.options.getUser('cible');
         const randomGif = hugGifs[Math.floor(Math.random() * hugGifs.length)];
 
-        // Créer un embed avec le texte et le GIF
+        // Créer un embed avec le GIF uniquement
         const hugEmbed = new EmbedBuilder()
-            .setDescription(`Voici un câlin pour toi, ${user} !`)
-            .setImage(randomGif) // Le GIF s'affiche directement
+            .setImage(randomGif) // Le GIF s'affiche directement dans l'embed
             .setColor('#ff99cc'); // Couleur optionnelle (rose ici, tu peux changer)
 
-        await interaction.reply({ embeds: [hugEmbed] });
+        // Répondre avec le ping au-dessus de l'embed
+        await interaction.reply({ content: `Voici un câlin pour toi, ${user} !`, embeds: [hugEmbed] });
     },
 };
