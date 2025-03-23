@@ -15,6 +15,7 @@ const hugGifs = [
     'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbGZ4MjgxMWowZHFqYm1mOHVoZHYza3ZnY2JkcGkxbm0zdzlrZXkyMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/mr8eXWPaLM2cw/giphy.gif',
     'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExa2Q3dnR6bTl0cWFsZHN1eHE2cW9jc3p0b2NvNjg5c2dmN3kyemg0ayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26gs6DXO9OPEUMuw8/giphy.gif',
     // Ajoute d'autres GIFs ici si tu veux plus de variété
+    
 ];
 
 module.exports = {
