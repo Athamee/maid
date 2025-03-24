@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
-const hugGifs = [
+const teaGifs = [
     "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmQ5czZ1M3dweHlxaWNwdXloY3pycnp3YTI2ZTFoY3RrZTB0Mm95YiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ZErmptaZPGQQXeO2Lw/giphy.gif",
     "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExYXRiOGNoeWNyb2ZtMDRmNXltbjF2Yzh4OW9odW5jaTRza2Uxd2JjaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0HlwwRxfcVEr4AUg/giphy.gif",
     "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExb3dramxkMTNhMDUxeDFmYnBwMWVlczN5em03Mzlpd3h0Mm9lNHdpcCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/hQdWtl18ibA58nil8t/giphy.gif",
@@ -67,7 +67,7 @@ module.exports = {
         }
 
         const user = interaction.options.getUser('cible');
-        const randomGif = hugGifs[Math.floor(Math.random() * hugGifs.length)];
+        const randomGif = teaGifs[Math.floor(Math.random() * teaGifs.length)];
 
         // Créer un embed avec le GIF uniquement
         const hugEmbed = new EmbedBuilder()
