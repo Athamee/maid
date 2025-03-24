@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 const hugGifs = [
-    "https://media1.tenor.com/m/TyM_PImMHB8AAAAd/coffee-smiley.gif",
+    "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZW4xZDRiNjNwZ2VqMGw0MTAzbWptMWN4bmNjejdmZWQwNGo2ZGN4eCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/M4ecx9P2jI4tq/giphy.gif",
     //ajouter au dessus les liens de gif
 ];
 
