@@ -1,24 +1,8 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 const hugGifs = [
-    "https://gifer.com/fr/Bomf",
-"https://gifer.com/fr/b6t",
-"https://gifer.com/fr/5to",
-"https://gifer.com/fr/17CS",
-"https://gifer.com/fr/JoQk",
-"https://gifer.com/fr/XV62",
-"https://gifer.com/fr/fza0",
-"https://gifer.com/fr/fyPW",
-"https://gifer.com/fr/7RnK",
-"https://gifer.com/fr/qZ5",
-"https://gifer.com/fr/SXN",
-"https://gifer.com/fr/9uyg",
-"https://gifer.com/fr/5F5v",
-"https://gifer.com/fr/QuHJ",
-"https://gifer.com/fr/Ug4s",
-"https://gifer.com/fr/2B9X",
-"https://gifer.com/fr/1410",
-"https://gifer.com/fr/YM8u",
+    "https://media1.tenor.com/m/TyM_PImMHB8AAAAd/coffee-smiley.gif",
+    //ajouter au dessus les liens de gif
 ];
 
 module.exports = {
