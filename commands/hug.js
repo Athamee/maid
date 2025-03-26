@@ -1,35 +1,14 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
-const hugGifs = [
-    'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExZzAzdmxoczNydm56dXRqM2oycXk1OXZqeHU5enphamhzY2dqdWFzcyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/KG5oq4vesf9r8JbBEN/giphy.gif',
-    'https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExOWV3cmIxaW52OTMybmNzdzRkc3BlbnI5ZzJpbThza3A2MW44OTV5aCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/BVNhieQ6tT9A9h0dp3/giphy.gif',
-    'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExdjlpNjVkazZwbWpkNHl5b21pYzg2bnM4bWt0cXd3bTJ3MWIyZmE4ciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/qJlDB5QdbIMPxALdnv/giphy.gif',
-    'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExczMxcXBmNzFjZnZrcjRwbThjdWl4eDUzMnMxdXN3ZWZrZ2F4eXBrZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/8ORo4eBT9i2zu/giphy.gif',
-    'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExYmFrNW10ODR3a2hndjEwZnMzczk3bXJmOG1uZWM4NzF1emZpdHZxYiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/PT0kQUBzWMOWI/giphy.gif',
-    'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaXhqcTJhbHF2OWd4cWo0dWNsaGVpanJkc3hrb3Z6NXZwNWhpOGEyaSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/TIWxMcRbtVeIU/giphy.gif',
-    'https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDN2ZWs0cjk2M3BlbTVpM3lhM25oM2hhNDIzNGx2YjdjN2t2MGk1dSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/vnx1NMcTTcJWg/giphy.gif',
-    'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmt0ZWQxaWlyM3U0MXl1dHhudnVjdXE0OHEzNzlnaGcyYnh0b294YyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/RmZemRytXqmic/giphy.gif',
-    'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbzF6bmNseGNudnJuYzJoenNib25scWZldDF6ZnFsN3c4cWl6NG1kcSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/iFVIEkMduXNII/giphy.gif',
-    'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExc3Z0MTR2NGlidXIzMmNxNTV5cWF1OW8ycmxiOXhvMjEzZ3VyYjR5YyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/CjzllG1RAnY3K/giphy.gif',
-    'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExdTZ0ZDBpZHRtajZjcmhycGg4c2NzZGpweXhvMmZ1bDU5ZHh3eDhmNiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12hAqqMqwgnV9C/giphy.gif',
-    'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbGZ4MjgxMWowZHFqYm1mOHVoZHYza3ZnY2JkcGkxbm0zdzlrZXkyMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/mr8eXWPaLM2cw/giphy.gif',
-    'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExa2Q3dnR6bTl0cWFsZHN1eHE2cW9jc3p0b2NvNjg5c2dmN3kyemg0ayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26gs6DXO9OPEUMuw8/giphy.gif',
-    'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExOXpvcWF1bDM5NjJtazlqN2tmYW15Y2Rvcjh2NmViaz Aloha3xamdtdDByZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/JXLHs90j6WktQ1Ydl6/giphy.gif',
-    'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExMTNjaGtsdHIxa2RmYWllYW1qYzNhejhrcGFnY3VxNXF5ZmVnMDE0eCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/zhpxMXQSBpgPu/giphy.gif',
-    'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExNjdvcGQ4MnRrOXJ4YnJ3ejFjampobDd4ZHk4dXFnZzcxcWg2aWJnbiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12SvEOhOjPe3Yc/giphy.gif',
-    'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExNThuanlqbWUxMDFtemtuOHNyb2Ryano2b2g0c3puMDBheDc0ejNkYiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/8ptQAAlYqpUeA/giphy.gif',
-    'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDJubHp6bWgwMDRtemx4eGxsbm1uZjR1eWQzZGcwdHd1eTZuNW5yeSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/WMU7Mmg7HDzVe/giphy.gif',
-];
-
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('hug')
-        .setDescription('Fais un câlin à quelqu’un avec un GIF aléatoire !')
+        .setDescription('Fais un câlin à quelqu’un avec un GIF aléatoire depuis Google Drive !')
         .addUserOption(option =>
             option.setName('cible')
                 .setDescription('La personne à câliner')
                 .setRequired(true)),
-    async execute(interaction) {
+    async execute(interaction, { getRandomFileFromDrive }) {
         const allowedChannelId = '1353348735660195911'; // Remplace par l'ID du salon autorisé
 
         // Vérifier si la commande est utilisée dans le bon salon
@@ -41,17 +20,31 @@ module.exports = {
         }
 
         const user = interaction.options.getUser('cible');
-        const randomGif = hugGifs[Math.floor(Math.random() * hugGifs.length)];
 
-        // Créer un embed avec le GIF uniquement
-        const hugEmbed = new EmbedBuilder()
-            .setImage(randomGif)
-            .setColor('#ff99cc');
+        // Déférer la réponse car l'appel à Google Drive peut prendre du temps
+        await interaction.deferReply();
 
-        // Répondre avec le ping de l'utilisateur qui exécute et de la cible
-        await interaction.reply({ 
-            content: `${interaction.user} fait un câlin à ${user} !`, 
-            embeds: [hugEmbed] 
-        });
+        try {
+            // Récupérer un GIF aléatoire depuis le dossier Google Drive
+            const folderId = process.env.GDRIVE_HUG; // ID du dossier depuis .env
+            const randomGif = await getRandomFileFromDrive(folderId);
+
+            // Créer un embed avec le GIF
+            const hugEmbed = new EmbedBuilder()
+                .setImage(randomGif)
+                .setColor('#ff99cc');
+
+            // Répondre avec le ping de l'utilisateur et de la cible
+            await interaction.editReply({ 
+                content: `${interaction.user} fait un câlin à ${user} !`, 
+                embeds: [hugEmbed] 
+            });
+        } catch (error) {
+            // Gestion des erreurs (ex. dossier vide ou problème d'accès)
+            await interaction.editReply({ 
+                content: 'Erreur lors de la récupération du GIF de câlin !', 
+                ephemeral: true 
+            });
+        }
     },
 };
