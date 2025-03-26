@@ -64,7 +64,7 @@ const deployCommands = async () => {
         commands.push(command.data.toJSON()); // Convertit chaque commande en JSON pour l'API
     }
 
-    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN); // Initialise REST avec le token.
+    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN); // Initialise REST avec le token
 
     try {
         console.log('Déploiement des commandes Slash...');
