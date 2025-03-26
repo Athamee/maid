@@ -23,13 +23,15 @@ module.exports = {
 
         try {
             const folderId = process.env.GDRIVE_HUG;
-            const fileId = await getRandomFileFromDrive(folderId); // Supposons que ça retourne un ID
-            const randomGif = `https://drive.google.com/uc?export=download&id=${fileId}`;
+            const fileId = await getRandomFileFromDrive(folderId);
+            console.log('File ID récupéré :', fileId); // Log pour debug
 
-            // Vérification de l'URL
-            if (!randomGif) {
-                throw new Error('Aucun GIF trouvé');
+            if (!fileId) {
+                throw new Error('Aucun fichier trouvé dans le dossier Google Drive');
             }
+
+            const randomGif = `https://drive.google.com/uc?export=download&id=${fileId}`;
+            console.log('URL générée :', randomGif); // Log pour vérifier
 
             const hugEmbed = new EmbedBuilder()
                 .setImage(randomGif)
@@ -40,7 +42,7 @@ module.exports = {
                 embeds: [hugEmbed] 
             });
         } catch (error) {
-            console.error(error); // Pour debug
+            console.error('Erreur :', error); // Log détaillé
             await interaction.editReply({ 
                 content: 'Erreur lors de la récupération du GIF de câlin !', 
                 ephemeral: true 
