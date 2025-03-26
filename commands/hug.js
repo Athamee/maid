@@ -19,19 +19,18 @@ module.exports = {
         }
 
         const user = interaction.options.getUser('cible');
-        await interaction.deferReply();
+        await interaction.deferReply({ content: 'Chargement du câlin en cours…' });
 
         try {
             const folderId = process.env.GDRIVE_HUG;
             const fileResult = await getRandomFileFromDrive(folderId);
 
-            // Extraire l’ID de fichier de l’URL renvoyée
             let fileId;
             if (typeof fileResult === 'string' && fileResult.includes('/file/d/')) {
                 const match = fileResult.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-                fileId = match ? match[1] : fileResult; // Si pas de match, on prend fileResult tel quel
+                fileId = match ? match[1] : fileResult;
             } else {
-                fileId = fileResult; // Si c’est déjà un ID brut
+                fileId = fileResult;
             }
 
             const randomGif = `https://drive.google.com/uc?export=download&id=${fileId}`;
@@ -41,7 +40,7 @@ module.exports = {
                 .setColor('#ff99cc');
 
             await interaction.editReply({ 
-                content: `${interaction.user} fait un câlin à ${user} !\nURL test : ${randomGif}`, 
+                content: `${interaction.user} fait un câlin à ${user} !`, 
                 embeds: [hugEmbed] 
             });
         } catch (error) {
