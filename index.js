@@ -94,7 +94,7 @@ client.on('interactionCreate', async interaction => {
     if (!command) return;
 
     try {
-        await command.execute(interaction, { getRandomFileFromDrive }); // Passe la fonction aux commandes
+        await command.execute(interaction, { getRandomFileFromDrive }); // Passe la fonction aux commandes.
     } catch (error) {
         console.error(error);
         await interaction.reply({ content: 'Erreur lors de l’exécution de la commande !', ephemeral: true });
