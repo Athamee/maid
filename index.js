@@ -18,7 +18,7 @@ client.commands = new Collection();
 
 // --- Configuration Google Drive ---
 const credentials = JSON.parse(process.env.GDRIVE_CREDENTIALS); // Charge depuis variable d’environnement
-const { client_secret, client_id, redirect_uris } = credentials.web; // Pour application web
+const { client_secret, client_id, redirect_uris } = credentials.installed; // Pour application web
 const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
 const token = JSON.parse(process.env.GDRIVE_TOKEN); // Charge depuis variable d’environnement
 oAuth2Client.setCredentials(token);
