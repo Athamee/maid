@@ -3,7 +3,7 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('hug')
-        .setDescription('Fais un câlin à quelqu’un avec GD')
+        .setDescription('Fais un câlin à quelqu’un avec un GIF aléatoire !')
         .addUserOption(option =>
             option.setName('cible')
                 .setDescription('La personne à câliner')
@@ -22,13 +22,13 @@ module.exports = {
         await interaction.deferReply({ content: 'Chargement du câlin en cours…' });
 
         try {
-            const gifs = await getGifList('hug');
+            const gifs = getGifList('hug'); // Plus d’await, car synchrone
             if (!gifs || gifs.length === 0) {
                 throw new Error('Aucun GIF disponible pour les câlins');
             }
 
             const randomGif = gifs[Math.floor(Math.random() * gifs.length)];
-            const gifUrl = `https://drive.google.com/uc?export=download&id=${randomGif.id}`;
+            const gifUrl = randomGif.webViewLink; // Essaie webViewLink pour l’animation
 
             const hugEmbed = new EmbedBuilder()
                 .setImage(gifUrl)

@@ -6,7 +6,7 @@ const path = require('path');
 const express = require('express');
 const { google } = require('googleapis');
 const { listGifs } = require('./googleDrive');
-const { updateGifList, getGifList } = require('./gifCache');
+const { updateGifList, getGifList, loadCache } = require('./gifCache'); // Ajout de loadCache
 
 const app = express();
 
@@ -66,11 +66,13 @@ const deployCommands = async () => {
 // Exécute le déploiement au démarrage
 deployCommands();
 
+// Charger le cache en mémoire au démarrage
 client.once('ready', async () => {
     console.log('Maid babe est en ligne !');
-    // Charger le cache au démarrage si vide
+    await loadCache(); // Charge le cache en mémoire une fois au démarrage
+    // Vérifie et initialise le cache si vide
     for (const [action, folderId] of Object.entries(FOLDER_IDS)) {
-        const cachedGifs = await getGifList(action);
+        const cachedGifs = getGifList(action); // Plus d’await, car synchrone
         if (!cachedGifs.length) {
             const gifs = await listGifs(folderId, oAuth2Client);
             await updateGifList(action, gifs);
