@@ -6,6 +6,21 @@ module.exports = {
         .setName('refresh_gif')
         .setDescription('Rafraîchit la liste des GIFs depuis Google Drive'),
     async execute(interaction, { listGifs, oAuth2Client, FOLDER_IDS }) {
+        // Liste des IDs des rôles autorisés
+        const allowedRoleIds = [
+            '1094318706525470908', // Remplace par le premier ID
+            //'ID_ROLE_2', // Remplace par le deuxième ID
+            //'ID_ROLE_3'  // Ajoute autant d'IDs que nécessaire
+        ];
+
+        // Vérifie si l'utilisateur a au moins un des rôles autorisés
+        if (!interaction.member.roles.cache.some(role => allowedRoleIds.includes(role.id))) {
+            return interaction.reply({
+                content: 'Désolé, cette commande est réservée aux membres avec un rôle requis !',
+                ephemeral: true
+            });
+        }
+
         await interaction.deferReply();
 
         try {
