@@ -1,38 +1,24 @@
 const fs = require('fs').promises;
 const path = require('path');
 
-const CACHE_FILE = path.join(__dirname, 'gifCache.json');
-let cache = {}; // Cache en mémoire
+const GIF_LIST_FILE = path.join(__dirname, 'commands', 'hugGifs.json');
+let gifList = {};
 
-// Charger le cache depuis le fichier au démarrage
-async function loadCache() {
+// Charger la liste depuis le fichier au démarrage
+async function loadGifList() {
     try {
-        const data = await fs.readFile(CACHE_FILE, 'utf8');
-        cache = JSON.parse(data);
+        const data = await fs.readFile(GIF_LIST_FILE, 'utf8');
+        gifList = JSON.parse(data);
     } catch (error) {
-        cache = {}; // Si le fichier n’existe pas, on commence avec un cache vide
+        console.error('Erreur lors du chargement de hugGifs.json :', error);
+        gifList = { hug: [] }; // Liste vide par défaut
     }
-    return cache;
+    return gifList;
 }
 
-// Sauvegarder le cache dans le fichier
-async function saveCache() {
-    await fs.writeFile(CACHE_FILE, JSON.stringify(cache, null, 2), 'utf8');
-}
-
-// Mettre à jour le cache (en mémoire et fichier)
-async function updateGifList(action, gifs) {
-    if (action) {
-        cache[action] = gifs; // Met à jour une action spécifique
-    } else {
-        Object.assign(cache, gifs); // Met à jour tout le cache
-    }
-    await saveCache(); // Sauvegarde sur disque
-}
-
-// Récupérer depuis le cache en mémoire
+// Récupérer la liste en mémoire
 function getGifList(action) {
-    return cache[action] || [];
+    return gifList[action] || [];
 }
 
-module.exports = { updateGifList, getGifList, loadCache };
+module.exports = { getGifList, loadGifList };

@@ -4,9 +4,7 @@ const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord.js');
 const path = require('path');
 const express = require('express');
-const { google } = require('googleapis');
-const { listGifs } = require('./googleDrive');
-const { updateGifList, getGifList, loadCache } = require('./gifCache'); // Ajout de loadCache
+const { getGifList, loadGifList } = require('./gifCache');
 
 const app = express();
 
@@ -15,19 +13,6 @@ const client = new Client({
 });
 
 client.commands = new Collection();
-
-// --- Configuration Google Drive avec OAuth2 ---
-const credentials = JSON.parse(process.env.GDRIVE_CREDENTIALS);
-const { client_secret, client_id, redirect_uris } = credentials.installed;
-const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
-const token = JSON.parse(process.env.GDRIVE_TOKEN);
-oAuth2Client.setCredentials(token);
-
-// IDs des dossiers Google Drive
-const FOLDER_IDS = {
-    hug: process.env.GDRIVE_HUG,
-    // Ajoute d'autres actions ici si besoin
-};
 
 // Chargement des commandes depuis le dossier 'commands'
 const commandsPath = path.join(__dirname, 'commands');
@@ -66,18 +51,11 @@ const deployCommands = async () => {
 // Exécute le déploiement au démarrage
 deployCommands();
 
-// Charger le cache en mémoire au démarrage
 client.once('ready', async () => {
     console.log('Maid babe est en ligne !');
-    await loadCache(); // Charge le cache en mémoire une fois au démarrage
-    // Vérifie et initialise le cache si vide
-    for (const [action, folderId] of Object.entries(FOLDER_IDS)) {
-        const cachedGifs = getGifList(action); // Plus d’await, car synchrone
-        if (!cachedGifs.length) {
-            const gifs = await listGifs(folderId, oAuth2Client);
-            await updateGifList(action, gifs);
-            console.log(`Cache initialisé pour ${action}`);
-        }
+    await loadGifList(); // Charge la liste d’URLs depuis commands/hugGifs.json
+    if (!getGifList('hug').length) {
+        console.warn('Aucune URL trouvée dans hugGifs.json pour "hug" !');
     }
 });
 
@@ -90,7 +68,7 @@ client.on('interactionCreate', async interaction => {
     if (!command) return;
 
     try {
-        await command.execute(interaction, { getGifList, listGifs, oAuth2Client, FOLDER_IDS }); // Passe les outils nécessaires
+        await command.execute(interaction, { getGifList }); // Passe uniquement getGifList
     } catch (error) {
         console.error(error);
         await interaction.reply({ content: 'Erreur lors de l’exécution de la commande !', ephemeral: true });

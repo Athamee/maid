@@ -22,16 +22,14 @@ module.exports = {
         await interaction.deferReply({ content: 'Chargement du câlin en cours…' });
 
         try {
-            const gifs = getGifList('hug'); // Plus d’await, car synchrone
+            const gifs = getGifList('hug');
             if (!gifs || gifs.length === 0) {
                 throw new Error('Aucun GIF disponible pour les câlins');
             }
 
             const randomGif = gifs[Math.floor(Math.random() * gifs.length)];
-            const gifUrl = randomGif.webViewLink; // Essaie webViewLink pour l’animation
-
             const hugEmbed = new EmbedBuilder()
-                .setImage(gifUrl)
+                .setImage(randomGif) // URL directe depuis hugGifs.json
                 .setColor('#ff99cc');
 
             await interaction.editReply({ 
@@ -41,7 +39,7 @@ module.exports = {
         } catch (error) {
             console.error('Erreur lors de l’exécution de hug :', error);
             await interaction.editReply({ 
-                content: 'Erreur lors de la récupération du GIF de câlin ! Utilise /refresh_gif si le problème persiste.', 
+                content: 'Erreur lors de la récupération du GIF de câlin !', 
                 ephemeral: true 
             });
         }
