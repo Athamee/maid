@@ -15,11 +15,22 @@ module.exports = {
             option
                 .setName('membre')
                 .setDescription('La personne à câliner (optionnel)')
-                .setRequired(false) // L’option reste facultative
+                .setRequired(false)
         ),
 
     // Fonction exécutée quand la commande est utilisée
     async execute(interaction) {
+        // ID du salon où la commande est autorisée (remplace par ton ID)
+        const allowedChannelId = '1353348735660195911'; // Ex. '123456789012345678'
+
+        // Vérifie si la commande est utilisée dans le bon salon
+        if (interaction.channel.id !== allowedChannelId) {
+            return interaction.reply({
+                content: 'Cette commande ne peut être utilisée que dans un salon spécifique !',
+                ephemeral: true // Message visible uniquement par l’utilisateur
+            });
+        }
+
         // Récupère les identifiants PCloud depuis les variables d’environnement
         const email = process.env.PCLOUD_EMAIL;
         const password = process.env.PCLOUD_PASSWORD;
@@ -35,7 +46,7 @@ module.exports = {
 
         // Récupère l’expéditeur et la cible
         const sender = interaction.user;
-        const target = interaction.options.getUser('membre') || interaction.user; // Si pas de cible, c’est l’expéditeur
+        const target = interaction.options.getUser('membre') || interaction.user;
 
         // Log pour vérifier la cible
         console.log('Expéditeur :', sender.tag, 'Cible :', target.tag);
