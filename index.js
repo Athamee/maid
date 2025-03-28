@@ -4,7 +4,7 @@ const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord.js');
 const path = require('path');
 const express = require('express');
-const { getGifList, loadGifList } = require('./gifCache');
+const fs = require('fs');
 
 const app = express();
 
@@ -16,8 +16,7 @@ client.commands = new Collection();
 
 // Chargement des commandes depuis le dossier 'commands'
 const commandsPath = path.join(__dirname, 'commands');
-const { readdirSync } = require('fs');
-const commandFiles = readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
 for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
@@ -51,12 +50,8 @@ const deployCommands = async () => {
 // Exécute le déploiement au démarrage
 deployCommands();
 
-client.once('ready', async () => {
+client.once('ready', () => {
     console.log('Maid babe est en ligne !');
-    await loadGifList(); // Charge la liste d’URLs depuis commands/hugGifs.json
-    if (!getGifList('hug').length) {
-        console.warn('Aucune URL trouvée dans hugGifs.json pour "hug" !');
-    }
 });
 
 // Gestion des interactions (commandes Slash)
@@ -68,7 +63,7 @@ client.on('interactionCreate', async interaction => {
     if (!command) return;
 
     try {
-        await command.execute(interaction, { getGifList }); // Passe uniquement getGifList
+        await command.execute(interaction); // Plus besoin de passer getGifList
     } catch (error) {
         console.error(error);
         await interaction.reply({ content: 'Erreur lors de l’exécution de la commande !', ephemeral: true });

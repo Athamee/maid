@@ -1,47 +1,50 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+require('dotenv').config();
+const { SlashCommandBuilder } = require('@discordjs/builders');
+const axios = require('axios');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('hug')
-        .setDescription('Fais un câlin à quelqu’un avec un GIF aléatoire !')
-        .addUserOption(option =>
-            option.setName('cible')
-                .setDescription('La personne à câliner')
-                .setRequired(true)),
-    async execute(interaction, { getGifList }) {
-        const allowedChannelId = '1353348735660195911';
+        .setDescription('Envoie un câlin avec un GIF aléatoire'),
+    async execute(interaction) {
+        const email = process.env.PCLOUD_EMAIL;
+        const password = process.env.PCLOUD_PASSWORD;
+        const folderId = process.env.PCLOUD_FOLDER_ID_HUG; // Spécifique à /hug
 
-        if (interaction.channel.id !== allowedChannelId) {
-            return interaction.reply({ 
-                content: 'Désolé, cette commande ne peut être utilisée que dans un salon spécifique !', 
-                ephemeral: true 
-            });
+        if (!folderId) {
+            return interaction.reply('Erreur : ID du dossier pour /hug non configuré !');
         }
 
-        const user = interaction.options.getUser('cible');
-        await interaction.deferReply({ content: 'Chargement du câlin en cours…' });
-
         try {
-            const gifs = getGifList('hug');
-            if (!gifs || gifs.length === 0) {
-                throw new Error('Aucun GIF disponible pour les câlins');
+            // Lister les fichiers
+            const listResponse = await axios.get('https://eapi.pcloud.com/listfolder', {
+                params: {
+                    username: email,
+                    password: password,
+                    folderid: folderId
+                }
+            });
+            const gifs = listResponse.data.metadata.contents.filter(file => file.contenttype === 'image/gif');
+            if (gifs.length === 0) {
+                return interaction.reply('Aucun GIF trouvé dans le dossier /hug !');
             }
 
+            // Choisir un GIF aléatoire
             const randomGif = gifs[Math.floor(Math.random() * gifs.length)];
-            const hugEmbed = new EmbedBuilder()
-                .setImage(randomGif) // URL directe depuis hugGifs.json
-                .setColor('#ff99cc');
+            const linkResponse = await axios.get('https://eapi.pcloud.com/getfilelink', {
+                params: {
+                    username: email,
+                    password: password,
+                    fileid: randomGif.fileid
+                }
+            });
+            const gifUrl = `https://${linkResponse.data.hosts[0]}${linkResponse.data.path}`;
 
-            await interaction.editReply({ 
-                content: `${interaction.user} fait un câlin à ${user} !`, 
-                embeds: [hugEmbed] 
-            });
+            // Envoyer dans Discord
+            await interaction.reply(gifUrl);
         } catch (error) {
-            console.error('Erreur lors de l’exécution de hug :', error);
-            await interaction.editReply({ 
-                content: 'Erreur lors de la récupération du GIF de câlin !', 
-                ephemeral: true 
-            });
+            console.error('Erreur :', error.response ? error.response.data : error.message);
+            await interaction.reply('Erreur lors de la récupération du GIF !');
         }
     },
 };
