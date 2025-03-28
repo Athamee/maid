@@ -5,7 +5,13 @@ const axios = require('axios');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('hug')
-        .setDescription('Envoie un câlin avec un GIF aléatoire'),
+        .setDescription('Envoie un câlin à un.e membre')
+        .addUserOption(option => // Ajout d'une option pour choisir un membre
+            option
+                .setName('membre')
+                .setDescription('La personne à câliner')
+                .setRequired(false) // Optionnel, si pas spécifié, on câline soi-même ou un message générique
+        ),
     async execute(interaction) {
         const email = process.env.PCLOUD_EMAIL;
         const password = process.env.PCLOUD_PASSWORD;
@@ -17,6 +23,10 @@ module.exports = {
             console.log('Erreur : folderId manquant');
             return interaction.reply('Erreur : ID du dossier pour /hug non configuré !');
         }
+
+        // Récupérer l'utilisateur cible (ou l'auteur si aucun n'est spécifié)
+        const target = interaction.options.getUser('membre') || interaction.user;
+        const sender = interaction.user;
 
         try {
             console.log('Requête listfolder...');
@@ -48,7 +58,11 @@ module.exports = {
             const gifUrl = `https://${linkResponse.data.hosts[0]}${linkResponse.data.path}`;
             console.log('Lien généré :', gifUrl);
 
-            await interaction.reply(gifUrl);
+            // Message personnalisé avec le sender et le target
+            const message = sender.id === target.id
+                ? `${sender.username} se fait un câlin tout seul !`
+                : `${sender.username} envoie un câlin à ${target.username} !`;
+            await interaction.reply({ content: message, files: [gifUrl] });
             console.log('/hug réussi');
         } catch (error) {
             console.error('Erreur dans /hug :', error.response ? error.response.data : error.message);
