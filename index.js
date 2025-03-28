@@ -14,7 +14,6 @@ const client = new Client({
 
 client.commands = new Collection();
 
-// Chargement des commandes depuis le dossier 'commands'
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
@@ -24,7 +23,6 @@ for (const file of commandFiles) {
     client.commands.set(command.data.name, command);
 }
 
-// Fonction pour déployer les commandes Slash
 const deployCommands = async () => {
     const commands = [];
     for (const file of commandFiles) {
@@ -47,14 +45,12 @@ const deployCommands = async () => {
     }
 };
 
-// Exécute le déploiement au démarrage
 deployCommands();
 
 client.once('ready', () => {
     console.log('Maid babe est en ligne !');
 });
 
-// Gestion des interactions (commandes Slash)
 client.on('interactionCreate', async interaction => {
     if (!interaction.isCommand()) return;
 
@@ -63,14 +59,15 @@ client.on('interactionCreate', async interaction => {
     if (!command) return;
 
     try {
-        await command.execute(interaction); // Plus besoin de passer getGifList
+        await command.execute(interaction);
     } catch (error) {
-        console.error(error);
-        await interaction.reply({ content: 'Erreur lors de l’exécution de la commande !', ephemeral: true });
+        console.error('Erreur dans la commande :', error);
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({ content: 'Erreur lors de l’exécution de la commande !', ephemeral: true });
+        }
     }
 });
 
-// Endpoint pour UptimeRobot ou monitoring
 app.get('/', (req, res) => res.send('Ta servante dévouée, Maid babe, est vivante !'));
 
 const port = process.env.PORT || 8000;

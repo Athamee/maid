@@ -9,14 +9,17 @@ module.exports = {
     async execute(interaction) {
         const email = process.env.PCLOUD_EMAIL;
         const password = process.env.PCLOUD_PASSWORD;
-        const folderId = process.env.PCLOUD_FOLDER_ID_HUG; // Spécifique à /hug
+        const folderId = process.env.PCLOUD_FOLDER_ID_HUG;
+
+        console.log('Début de /hug - Email:', email, 'Folder ID:', folderId);
 
         if (!folderId) {
+            console.log('Erreur : folderId manquant');
             return interaction.reply('Erreur : ID du dossier pour /hug non configuré !');
         }
 
         try {
-            // Lister les fichiers
+            console.log('Requête listfolder...');
             const listResponse = await axios.get('https://eapi.pcloud.com/listfolder', {
                 params: {
                     username: email,
@@ -24,13 +27,17 @@ module.exports = {
                     folderid: folderId
                 }
             });
+            console.log('listfolder réussi, contenus :', listResponse.data.metadata.contents.length);
             const gifs = listResponse.data.metadata.contents.filter(file => file.contenttype === 'image/gif');
             if (gifs.length === 0) {
+                console.log('Aucun GIF trouvé');
                 return interaction.reply('Aucun GIF trouvé dans le dossier /hug !');
             }
 
-            // Choisir un GIF aléatoire
             const randomGif = gifs[Math.floor(Math.random() * gifs.length)];
+            console.log('GIF choisi :', randomGif.name, 'FileID :', randomGif.fileid);
+
+            console.log('Requête getfilelink...');
             const linkResponse = await axios.get('https://eapi.pcloud.com/getfilelink', {
                 params: {
                     username: email,
@@ -39,12 +46,15 @@ module.exports = {
                 }
             });
             const gifUrl = `https://${linkResponse.data.hosts[0]}${linkResponse.data.path}`;
+            console.log('Lien généré :', gifUrl);
 
-            // Envoyer dans Discord
             await interaction.reply(gifUrl);
+            console.log('/hug réussi');
         } catch (error) {
-            console.error('Erreur :', error.response ? error.response.data : error.message);
-            await interaction.reply('Erreur lors de la récupération du GIF !');
+            console.error('Erreur dans /hug :', error.response ? error.response.data : error.message);
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply('Erreur lors de la récupération du GIF !');
+            }
         }
     },
 };
