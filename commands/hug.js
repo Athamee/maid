@@ -1,12 +1,12 @@
 require('dotenv').config();
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { EmbedBuilder } = require('discord.js');
-const axios = require('axios'); // Assure-toi que cette ligne est bien là.
+const axios = require('axios');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('hug')
-        .setDescription('Envoie un câlin.')
+        .setDescription('Envoie un câlin à un.e membre')
         .addUserOption(option =>
             option
                 .setName('membre')
@@ -58,7 +58,10 @@ module.exports = {
             });
             console.log('Réponse getfilelink :', linkResponse.data);
             const gifUrl = `https://${linkResponse.data.hosts[0]}${linkResponse.data.path}`;
-            console.log('Lien généré :', gifUrl);
+            console.log('Lien GIF généré :', gifUrl);
+
+            // Test temporaire : envoyer l’URL en clair pour vérifier
+            // await interaction.reply(gifUrl);
 
             const embed = new EmbedBuilder()
                 .setDescription(sender.id === target.id
