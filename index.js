@@ -42,12 +42,6 @@ const deployCommands = async () => {
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN); // Initialise l’API REST
 
     try {
-        // Étape 1 : Supprime toutes les commandes existantes
-        console.log('Suppression de toutes les commandes existantes...');
-        await rest.put(Routes.applicationCommands(process.env.ID_APP), { body: [] }); // Vide la liste des commandes
-        console.log('Toutes les commandes ont été supprimées !');
-
-        // Étape 2 : Déploie les nouvelles commandes
         console.log('Déploiement des commandes Slash...');
         await rest.put(
             Routes.applicationCommands(process.env.ID_APP), // Déploie globalement les commandes

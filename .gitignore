@@ -3,3 +3,5 @@ node_modules/
 listes_gif/
 credentials.json
 token.json
+clear_commands.js
+clear_commands_guild.js
