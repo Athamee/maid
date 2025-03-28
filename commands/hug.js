@@ -1,16 +1,16 @@
 require('dotenv').config();
-const { SlashCommandBuilder } = require('@discordjs/builders');
+const { SlashCommandBuilder, EmbedBuilder } = require('@discordjs/builders');
 const axios = require('axios');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('hug')
-        .setDescription('Envoie un câlin à un.e membre')
-        .addUserOption(option => // Ajout d'une option pour choisir un membre
+        .setDescription('Envoie un câlin.')
+        .addUserOption(option =>
             option
                 .setName('membre')
                 .setDescription('La personne à câliner')
-                .setRequired(false) // Optionnel, si pas spécifié, on câline soi-même ou un message générique
+                .setRequired(false)
         ),
     async execute(interaction) {
         const email = process.env.PCLOUD_EMAIL;
@@ -24,9 +24,8 @@ module.exports = {
             return interaction.reply('Erreur : ID du dossier pour /hug non configuré !');
         }
 
-        // Récupérer l'utilisateur cible (ou l'auteur si aucun n'est spécifié)
-        const target = interaction.options.getUser('membre') || interaction.user;
         const sender = interaction.user;
+        const target = interaction.options.getUser('membre') || interaction.user;
 
         try {
             console.log('Requête listfolder...');
@@ -58,11 +57,15 @@ module.exports = {
             const gifUrl = `https://${linkResponse.data.hosts[0]}${linkResponse.data.path}`;
             console.log('Lien généré :', gifUrl);
 
-            // Message personnalisé avec le sender et le target
-            const message = sender.id === target.id
-                ? `${sender.username} se fait un câlin tout seul !`
-                : `${sender.username} envoie un câlin à ${target.username} !`;
-            await interaction.reply({ content: message, files: [gifUrl] });
+            // Créer un embed avec le GIF
+            const embed = new EmbedBuilder()
+                .setDescription(sender.id === target.id
+                    ? `<@${sender.id}> se fait un câlin tout seul !`
+                    : `<@${sender.id}> fait un câlin à <@${target.id}> !`)
+                .setImage(gifUrl)
+                .setColor('#FF69B4'); // Couleur rose pour un côté mignon, change si tu veux !
+
+            await interaction.reply({ embeds: [embed] });
             console.log('/hug réussi');
         } catch (error) {
             console.error('Erreur dans /hug :', error.response ? error.response.data : error.message);
