@@ -2,7 +2,7 @@
 require('dotenv').config();
 // Importe les outils pour créer des commandes Slash et des embeds Discord
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, AttachmentBuilder } = require('discord.js'); // Ajout de AttachmentBuilder
 // Importe axios pour faire des requêtes HTTP vers PCloud
 const axios = require('axios');
 
@@ -36,7 +36,7 @@ module.exports = {
 
         // Récupère l’expéditeur (celui qui tape la commande) et le destinataire (optionnel)
         const sender = interaction.user;
-        const target = interaction.options.getUser('membre') || interaction.user; // Par défaut, l’expéditeur
+        const target = interaction.options.getUser('membre') || interaction.user;
 
         // Diffère la réponse pour éviter l’expiration de l’interaction (3s max sinon)
         await interaction.deferReply();
@@ -82,19 +82,22 @@ module.exports = {
             const gifUrl = `https://${linkResponse.data.hosts[0]}${linkResponse.data.path}`;
             console.log('Lien GIF généré :', gifUrl);
 
-            // Crée un embed avec le texte et le GIF
+            // Crée un embed avec le texte
             const embed = new EmbedBuilder()
                 .setDescription(sender.id === target.id
-                    ? `<@${sender.id}> se fait un câlin tout seul !` // Si l’expéditeur se câline lui-même
-                    : `<@${sender.id}> fait un câlin à <@${target.id}> !`) // Sinon, mentionne les deux membres
-                .setImage(gifUrl) // Ajoute le GIF dans l’embed
-                .setColor('#FF69B4'); // Couleur rose pour le style
+                    ? `<@${sender.id}> se fait un câlin tout seul !`
+                    : `<@${sender.id}> fait un câlin à <@${target.id}> !`)
+                .setColor('#FF69B4');
 
-            // Envoie l’embed en modifiant la réponse différée
-            await interaction.editReply({ embeds: [embed] });
+            // Crée un attachment pour le GIF
+            const attachment = new AttachmentBuilder(gifUrl, { name: 'hug.gif' });
+            embed.setImage('attachment://hug.gif'); // Référence l’attachment dans l’embed
+
+            // Envoie l’embed avec le fichier attaché
+            await interaction.editReply({ embeds: [embed], files: [attachment] });
             console.log('/hug réussi');
         } catch (error) {
-            // En cas d’erreur (ex. problème réseau ou PCloud), logge l’erreur et envoie un message
+            // En cas d’erreur, logge et envoie un message
             console.error('Erreur dans /hug :', error.response ? error.response.data : error.message);
             await interaction.editReply('Erreur lors de la récupération du GIF !');
         }
