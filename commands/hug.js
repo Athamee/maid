@@ -1,11 +1,12 @@
 require('dotenv').config();
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { EmbedBuilder } = require('discord.js'); // Ajusté pour discord.js v14
+const { EmbedBuilder } = require('discord.js');
+const axios = require('axios'); // Assure-toi que cette ligne est bien là
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('hug')
-        .setDescription('Envoie un câlin à un.e membre')
+        .setDescription('Envoie un câlin.')
         .addUserOption(option =>
             option
                 .setName('membre')
