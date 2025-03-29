@@ -92,19 +92,25 @@ module.exports = {
             const gifUrl = `https://${linkResponse.data.hosts[0]}${linkResponse.data.path}`;
             console.log('Lien GIF généré :', gifUrl);
 
-            // Crée l’embed avec le texte adapté
+            // Définit le texte avec les mentions en dehors de l’embed
+            const messageContent = sender.id === target.id
+                ? `<@${sender.id}> se fait un câlin !`
+                : `<@${sender.id}> fait un câlin à <@${target.id}> !`;
+
+            // Crée l’embed sans les mentions
             const embed = new EmbedBuilder()
-                .setDescription(sender.id === target.id
-                    ? `<@${sender.id}> se fait un câlin !`
-                    : `<@${sender.id}> fait un câlin à <@${target.id}> !`)
                 .setColor('#FF69B4');
 
             // Crée un attachment pour le GIF
             const attachment = new AttachmentBuilder(gifUrl, { name: 'hug.gif' });
             embed.setImage('attachment://hug.gif');
 
-            // Envoie la réponse
-            await interaction.editReply({ embeds: [embed], files: [attachment] });
+            // Envoie la réponse avec le ping dans le content et l’embed séparé
+            await interaction.editReply({
+                content: messageContent,
+                embeds: [embed],
+                files: [attachment]
+            });
             console.log('/hug réussi');
         } catch (error) {
             console.error('Erreur dans /hug :', error.response ? error.response.data : error.message);
