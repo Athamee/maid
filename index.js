@@ -1,5 +1,7 @@
-// Charge les variables d’environnement depuis le fichier .env
-require('dotenv').config();
+// Charge les variables d’environnement depuis le fichier .env uniquement si on n’est pas sur Replit
+if (!process.env.REPLIT) {
+    require('dotenv').config();
+}
 // Importe les modules Discord.js pour le bot et les commandes
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { REST } = require('@discordjs/rest');
@@ -87,7 +89,7 @@ client.on('interactionCreate', async interaction => {
 // Endpoint Express pour vérifier que le bot est en vie
 app.get('/', (req, res) => res.send('Ta servante dévouée, Maid babe, est vivante !'));
 
-// Définit le port (fourni par Koyeb ou 8000 par défaut)
+// Définit le port (fourni par Replit ou 8000 par défaut)
 const port = process.env.PORT || 8000;
 app.listen(port, () => console.log(`Serveur Express démarré sur le port ${port}`));
 
