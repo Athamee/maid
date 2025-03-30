@@ -1,5 +1,5 @@
-// Charge les variables d’environnement depuis le fichier .env uniquement si on n’est pas sur Replit
-if (!process.env.REPLIT) {
+// Charge les variables d’environnement depuis .env uniquement si on n’est pas sur Render
+if (!process.env.RENDER) {
     require('dotenv').config();
 }
 // Importe les modules Discord.js pour le bot et les commandes
@@ -11,8 +11,20 @@ const path = require('path');
 const express = require('express');
 const fs = require('fs');
 
-// Initialise le serveur Express pour le monitoring (ex. UptimeRobot)
+// Initialise le serveur Express pour le monitoring et health checks
 const app = express();
+
+// Endpoint Health Check pour Render
+app.get('/health', (req, res) => {
+    res.status(200).send('Maid babe est en bonne santé !');
+});
+
+// Endpoint racine pour vérifier manuellement que le bot est en vie
+app.get('/', (req, res) => res.send('Ta servante dévouée, Maid babe, est vivante !'));
+
+// Définit le port (fourni par Render ou 8000 par défaut)
+const port = process.env.PORT || 8000;
+app.listen(port, () => console.log(`Serveur Express démarré sur le port ${port}`));
 
 // Crée le client Discord avec l’intention de gérer les guildes
 const client = new Client({
@@ -85,13 +97,6 @@ client.on('interactionCreate', async interaction => {
         }
     }
 });
-
-// Endpoint Express pour vérifier que le bot est en vie
-app.get('/', (req, res) => res.send('Ta servante dévouée, Maid babe, est vivante !'));
-
-// Définit le port (fourni par Replit ou 8000 par défaut)
-const port = process.env.PORT || 8000;
-app.listen(port, () => console.log(`Serveur Express démarré sur le port ${port}`));
 
 // Connecte le bot à Discord avec le token
 client.login(process.env.TOKEN).catch((error) => {
