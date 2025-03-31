@@ -20,14 +20,14 @@ module.exports = {
 
     // Fonction exécutée quand la commande est utilisée
     async execute(interaction) {
-        // ID du salon où la commande est autorisée (remplace par ton ID)
-        const allowedChannelId = '1353348735660195911'; // Ex. '123456789012345678'
+        // ID du salon où la commande est autorisée
+        const allowedChannelId = '1353348735660195911';
 
         // Vérifie si la commande est utilisée dans le bon salon
         if (interaction.channel.id !== allowedChannelId) {
             return interaction.reply({
                 content: 'Cette commande ne peut être utilisée que dans un salon spécifique !',
-                ephemeral: true // Message visible uniquement par l’utilisateur
+                ephemeral: true
             });
         }
 
@@ -51,9 +51,15 @@ module.exports = {
         // Log pour vérifier la cible
         console.log('Expéditeur :', sender.tag, 'Cible :', target.tag);
 
-        // Diffère la réponse pour éviter l’expiration
-        await interaction.deferReply();
+        // Définit le texte avec les mentions
+        const messageContent = sender.id === target.id
+            ? `<@${sender.id}> se fait un câlin !`
+            : `<@${sender.id}> fait un câlin à <@${target.id}> !`;
 
+        // Log pour vérifier ce qui est envoyé
+        console.log('Message envoyé :', messageContent);
+
+        // Récupère un GIF de PCloud
         try {
             // Requête pour lister les fichiers dans le dossier PCloud
             console.log('Requête listfolder...');
@@ -72,7 +78,7 @@ module.exports = {
 
             if (gifs.length === 0) {
                 console.log('Aucun GIF trouvé');
-                return interaction.editReply('Aucun GIF trouvé dans le dossier /hug !');
+                return interaction.reply('Aucun GIF trouvé dans le dossier /hug !');
             }
 
             // Choisit un GIF aléatoire
@@ -92,11 +98,6 @@ module.exports = {
             const gifUrl = `https://${linkResponse.data.hosts[0]}${linkResponse.data.path}`;
             console.log('Lien GIF généré :', gifUrl);
 
-            // Définit le texte avec les mentions en dehors de l’embed
-            const messageContent = sender.id === target.id
-                ? `<@${sender.id}> se fait un câlin !`
-                : `<@${sender.id}> fait un câlin à <@${target.id}> !`;
-
             // Crée l’embed sans les mentions
             const embed = new EmbedBuilder()
                 .setColor('#FF69B4');
@@ -105,8 +106,8 @@ module.exports = {
             const attachment = new AttachmentBuilder(gifUrl, { name: 'hug.gif' });
             embed.setImage('attachment://hug.gif');
 
-            // Envoie la réponse avec le ping dans le content et l’embed séparé
-            await interaction.editReply({
+            // Envoie tout en une seule fois avec reply
+            await interaction.reply({
                 content: messageContent,
                 embeds: [embed],
                 files: [attachment]
@@ -114,7 +115,7 @@ module.exports = {
             console.log('/hug réussi');
         } catch (error) {
             console.error('Erreur dans /hug :', error.response ? error.response.data : error.message);
-            await interaction.editReply('Erreur lors de la récupération du GIF !');
+            await interaction.reply('Erreur lors de la récupération du GIF !');
         }
     },
 };
