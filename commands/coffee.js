@@ -1,73 +1,121 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-
-const coffeeGifs = [
-    "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZW4xZDRiNjNwZ2VqMGw0MTAzbWptMWN4bmNjejdmZWQwNGo2ZGN4eCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/M4ecx9P2jI4tq/giphy.gif",
-    "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExY242bGR4b2FlZ3c2OTczODlkOGYzdDl3bGh0eGpna3FxZzVjbWo5byZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/7qV3yswT0K8hi/giphy.gif",
-    "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExYjRrMWE0MHNqb2VrbTBycXdtdjlibm8yMWN6Nng0d2UzZDQ1bXd2ayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/Mpgt8pozJ6J2g/giphy.gif",
-    "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMHhhMHR3bmEzOXRlY2swcTdjMnQ3aXVpNjhxNGVtM3B6YXBsdDdwNiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/103xBGbLhYFuwM/giphy.gif",
-    "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMTZnZm9lMzA1NzQ5ZHdmbm80ZjJxYjBueDNrdGd1YWJzdjVkdTdoZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3jVT4U5bilspG/giphy.gif",
-    "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExMXEwcnU0NHVqZTRmMWZsaTRhY2N3a3FlcTNxeWV6cDE0bW95Mmd1MiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/CqtG4f5UF9G5q/giphy.gif",
-    "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZHIxemg3MWN0MzZhNzk0a3h4M3BiZnV0OWprM3dzbXlsbjNuazRmNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/X8OQGmNtNXTyg/giphy.gif",
-    "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbm84bXdtZGpncDczd3VvZ21jMmQ0ZWEybzc2dW50amJ6OGx4a3V4cSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/HVhofxmUXMyGs/giphy.gif",
-    "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExd3Z2OGY5M3VvOWwxcHU0NmNmZnNjOTlzdWFzNmt0Y2RwYmZnenp3ZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/321wKleotdr4puJIvk/giphy.gif",
-    "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGJyNTU4ajkzYWkwZHNnMGtscno5NHRtbXZubjhwaHNrdWk2NmlhYiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12OZlHgyEZZHRm/giphy.gif",
-    "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbm40djY0cXJreXVmOGFnbDZta3Mwb2lxYWR3YjdudWMxbGN4cXFraCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/6NlmBQLhWy2QM/giphy.gif",
-    "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNTRjbzJoOXBsYWtlNjk2dG5zMDE2Njl5MDA0MHQzam01OXk3NWlhayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/rsQu1BC0BF8wo/giphy.gif",
-    "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExb3hlemgyZGNtaGdic2QxcTd6emwwYjIzMDdjNTJ4NjQ1dXV1d2RseSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/WvN7uCpZaNNXW/giphy.gif",
-    "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExb2U1ZDU1ODZtZjY1ZThkMTR3OGkwd2NvNDAwOWo4dTNmanYyemN5ZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/Hyq5QFq4t9qDu/giphy.gif",
-    "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExY3Mzbms2emo1MnIxOWhhYTN5OTMwYTg3bGgzZWYzZHpxNTh0eTFvaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/XlOLpoZyYZ1pm/giphy.gif",
-    "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExa2hmeDB4ZnQxY2Y4NmN4NjNidjc2Mmc1OG1reXY2c2JzMnpnMXJxMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/I1cEnXR3z7RbG/giphy.gif",
-    "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExcXU5Y3prOTUyYzRjNW00OXAxbnh0NXR4ZHgyemdpNGF5Z3ZuYzJhcSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2jd7CRuYayGpW/giphy.gif",
-    "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExOGFoaHA1MjJjaWFjcTd2NnlqNXFvanU5NWsxOXpoN2IweWptOGx0cSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o6Zt7efI3ruag4zEA/giphy.gif",
-    "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbDV0OTJ1OHl1cWpkM2d0N2RnMmxqZW1iNThpZGhrZHdtMnVnaW52OCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/nN7Chphf1ICwo/giphy.gif",
-    "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdjdudHdvNnFlMnlqdXN5YmwwaWt1OHMyc2xjd2Y0aWhmZ3FoNXMyYiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/iG4ky2zidnxTJE9zgP/giphy.gif",
-    "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExNG5pcWE5NHF0eGhzemVrOXV0bWN6cDJueTMxMTQxdHc0ZWNjYXc5MSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/5Ztn33chuvutW/giphy.gif",
-    "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExdDRibHVvaXZwbzdjampycjk4NDY3dXVhNjUzM25vdGxzdzZ6NnhjaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3dpTOXVkXmPdcpvoRc/giphy.gif",
-    "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNW9pbWNnZHlpcGRwNHVkbHowaWFxaXIzcnFtOHc0cGp0c2VpMmpoYSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/Y4i5VX3WsSRtm/giphy.gif",
-    "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExbHdoend6azNuc2kxaHd3dmZ6eGVzcHp2aHl2Mmhna2RwenBqbHRlbSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/oZEBLugoTthxS/giphy.gif",
-    "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaG03dTJoZ3o4OTd6MmRzazU1bWlmYnNmbjlzYnJzNXN6cnVleW83biZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o6Zt5l94AqEdUrWp2/giphy.gif",
-    "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExdGJmZ3M4c3ppMTVkcTNzMjZoZXYzdmw1djUzM2xvd3Bwd2prazZscyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/w9d15TEDKpEVf0FSFA/giphy.gif",
-    "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWhud3ZramUxMHh6emt2NmM3bGF4dzlidDc0bHA5OGt2eXJvYnRyMCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/sAY2wh0zK1z68/giphy.gif",
-    "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdzBhZGZ3anFncTR1dTEyYTFxMjNmamNmbjA2N3VvYjBjd3l6b2l0dCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/KY2dtJNlGPH08w41FN/giphy.gif",
-    "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZHVucGZ4YzYzYm9oZHpxMnJrbml4NTN1ejBsYXhzczcxdDg2dnpqZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/azqIclO2IYLqBbGJAT/giphy.gif",
-    "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdzAyMWQzdWN1dHg3YTRxbzRuZnBuZ2RkbGI0amk2dmx5Zzc5eW1sdiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/aFJL4qOgTbkgqsBrab/giphy.gif",
-    "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGd6Y2l4c3JyaGN2ejJramtrbXhvbHc1MmU1N2Nhd2R3dHA0dG5nNCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/XqZ9yNKuo3T2/giphy.gif",
-    "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMHJsN3UwcjJubzJ2b3Vqdnh3d2QyOHJ6ZXR0emZ6ank4ODJpa2Q5ZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3nbxypT20Ulmo/giphy.gif",
-
-    //ajouter au dessus les liens de gif
-];
+// Charge les variables d’environnement depuis le fichier .env
+require('dotenv').config();
+// Importe les outils pour créer des commandes Slash et des embeds Discord
+const { SlashCommandBuilder } = require('@discordjs/builders');
+const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
+// Importe axios pour faire des requêtes HTTP vers PCloud
+const axios = require('axios');
 
 module.exports = {
+    // Définit la commande Slash /hug
     data: new SlashCommandBuilder()
         .setName('coffee')
-        .setDescription('Sert un café avec un GIF aléatoire !')
+        .setDescription('Sert un café à un.e membre ou à toi-même')
         .addUserOption(option =>
-            option.setName('cible')
-                .setDescription('La personne servie')
-                .setRequired(true)),
-    async execute(interaction) {
-        const allowedChannelId = '1353348735660195911'; // Remplace par l'ID du salon autorisé
+            option
+                .setName('membre')
+                .setDescription('La personne à câliner (optionnel)')
+                .setRequired(false)
+        ),
 
-        // Vérifier si la commande est utilisée dans le bon salon
+    // Fonction exécutée quand la commande est utilisée
+    async execute(interaction) {
+        // ID du salon où la commande est autorisée
+        const allowedChannelId = '1353348735660195911';
+
+        // Vérifie si la commande est utilisée dans le bon salon
         if (interaction.channel.id !== allowedChannelId) {
-            return interaction.reply({ 
-                content: 'Désolé, cette commande ne peut être utilisée que dans un salon spécifique !', 
-                ephemeral: true // Message visible uniquement par l'utilisateur
+            return interaction.reply({
+                content: 'Cette commande ne peut être utilisée que dans un salon spécifique !',
+                ephemeral: true
             });
         }
 
-        const user = interaction.options.getUser('cible');
-        const randomGif = coffeeGifs[Math.floor(Math.random() * coffeeGifs.length)];
+        // Récupère les identifiants PCloud depuis les variables d’environnement
+        const email = process.env.PCLOUD_EMAIL;
+        const password = process.env.PCLOUD_PASSWORD;
+        const folderId = process.env.PCLOUD_FOLDER_ID_COFFEE;
 
-        // Créer un embed avec le GIF uniquement
-        const hugEmbed = new EmbedBuilder()
-            .setImage(randomGif)
-            .setColor('#ff99cc');
+        // Log pour déboguer
+        console.log('Début de /hug - Email:', email, 'Password:', password ? '[masqué]' : 'undefined', 'Folder ID:', folderId);
 
-        // Répondre avec le ping de l'utilisateur qui exécute et de la cible
-        await interaction.reply({ 
-            content: `${interaction.user} sert un café à ${user} !`, 
-            embeds: [hugEmbed] 
-        });
+        if (!folderId) {
+            console.log('Erreur : folderId manquant');
+            return interaction.reply('Erreur : ID du dossier pour /coffee non configuré !');
+        }
+
+        // Récupère l’expéditeur et la cible
+        const sender = interaction.user;
+        const target = interaction.options.getUser('membre') || interaction.user;
+
+        // Log pour vérifier la cible
+        console.log('Expéditeur :', sender.tag, 'Cible :', target.tag);
+
+        // Définit le texte avec les mentions
+        const messageContent = sender.id === target.id
+            ? `<@${sender.id}> se sert un café !`
+            : `<@${sender.id}> sert un café à <@${target.id}> !`;
+
+        // Log pour vérifier ce qui est envoyé
+        console.log('Message envoyé :', messageContent);
+
+        // Récupère un GIF de PCloud
+        try {
+            // Requête pour lister les fichiers dans le dossier PCloud
+            console.log('Requête listfolder...');
+            const listResponse = await axios.get('https://eapi.pcloud.com/listfolder', {
+                params: {
+                    username: email,
+                    password: password,
+                    folderid: folderId
+                }
+            });
+            console.log('listfolder réussi, contenus :', listResponse.data.metadata.contents.length);
+
+            // Filtre pour ne garder que les GIFs
+            const gifs = listResponse.data.metadata.contents.filter(file => file.contenttype === 'image/gif');
+            console.log('GIFs trouvés :', gifs.length);
+
+            if (gifs.length === 0) {
+                console.log('Aucun GIF trouvé');
+                return interaction.reply('Aucun GIF trouvé dans le dossier /coffee !');
+            }
+
+            // Choisit un GIF aléatoire
+            const randomGif = gifs[Math.floor(Math.random() * gifs.length)];
+            console.log('GIF choisi :', randomGif.name, 'FileID :', randomGif.fileid);
+
+            // Requête pour obtenir un lien temporaire vers le GIF
+            console.log('Requête getfilelink...');
+            const linkResponse = await axios.get('https://eapi.pcloud.com/getfilelink', {
+                params: {
+                    username: email,
+                    password: password,
+                    fileid: randomGif.fileid
+                }
+            });
+            console.log('Réponse getfilelink :', linkResponse.data);
+            const gifUrl = `https://${linkResponse.data.hosts[0]}${linkResponse.data.path}`;
+            console.log('Lien GIF généré :', gifUrl);
+
+            // Crée l’embed sans les mentions
+            const embed = new EmbedBuilder()
+                .setColor('#FF69B4');
+
+            // Crée un attachment pour le GIF
+            const attachment = new AttachmentBuilder(gifUrl, { name: 'coffee.gif' });
+            embed.setImage('attachment://coffee.gif');
+
+            // Envoie tout en une seule fois avec reply
+            await interaction.reply({
+                content: messageContent,
+                embeds: [embed],
+                files: [attachment]
+            });
+            console.log('/coffee served');
+        } catch (error) {
+            console.error('Erreur dans /coffee :', error.response ? error.response.data : error.message);
+            await interaction.reply('Erreur lors de la récupération du GIF !');
+        }
     },
 };
