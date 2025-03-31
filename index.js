@@ -26,9 +26,12 @@ app.get('/', (req, res) => res.send('Ta servante dévouée, Maid babe, est vivan
 const port = process.env.PORT || 8000;
 app.listen(port, () => console.log(`Serveur Express démarré sur le port ${port}`));
 
-// Crée le client Discord avec l’intention de gérer les guildes
+// Crée le client Discord avec les intents Guilds et GuildMembers
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds]
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers
+    ]
 });
 
 // Crée une collection pour stocker les commandes
