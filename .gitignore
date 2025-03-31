@@ -1,6 +1,6 @@
 node_modules/
 .env
-listes_gif/
+technicals/
 credentials.json
 token.json
 clear_commands.js
