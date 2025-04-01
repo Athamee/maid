@@ -53,7 +53,7 @@ module.exports = {
 
         // Définit le texte avec les mentions
         const messageContent = sender.id === target.id
-            ? `<@${sender.id}> se fait un câlin !`
+            ? `<@${sender.id}> réclame un câlin !`
             : `<@${sender.id}> fait un câlin à <@${target.id}> !`;
 
         // Log pour vérifier ce qui est envoyé

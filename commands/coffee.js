@@ -14,7 +14,7 @@ module.exports = {
         .addUserOption(option =>
             option
                 .setName('membre')
-                .setDescription('La personne à câliner (optionnel)')
+                .setDescription('La personne destinataire (optionnel)')
                 .setRequired(false)
         ),
 
@@ -53,7 +53,7 @@ module.exports = {
 
         // Définit le texte avec les mentions
         const messageContent = sender.id === target.id
-            ? `<@${sender.id}> se sert un café !`
+            ? `<@${sender.id}> boit un café !`
             : `<@${sender.id}> sert un café à <@${target.id}> !`;
 
         // Log pour vérifier ce qui est envoyé
