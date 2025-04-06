@@ -14,17 +14,17 @@ module.exports = (client) => {
 
         // Liste de mots à détecter et réponses associées
         const triggerWords = {
-            'bonjour': 'Coucou ! Comment vas-tu aujourd’hui ?',
+            'bonjour': 'Coucou ! Comment vas-tu aujourd’hui ? Tu veux un thé, un café ou un cookie pour te requinquer ? Viens par ici : <#1353348735660195911>, je t\'y attends.',
             'salut': 'Salut, chère âme ! Que puis-je faire pour toi ?',
             'aide': 'Je suis là pour t’aider ! As-tu besoin d\'une modératrice ? Dans ce cas ping @Gaystapo.',
             'merci': 'De rien, c’est un plaisir de te servir !',
             'pizza': 'Miam, une pizza ? Tu m’en gardes une part ? 🍕',
             'lol': 'Haha, qu’est-ce qui te fait rire ?',
-            'bot': 'Oui, je suis là ! Toutes les commandes des bots se font ici : <#1160229527608369213>, sauf si tu veux me parler à moi, c\'est ici : <#1353348735660195911>.'
-            'calin': 'Tu veux un câlin ? Viens dans <#1353348735660195911> et fais la commande "/hug", je serais ravie de te faire un câlin.'
-            'thé': 'Tu veux un thé ? Viens dans <#1353348735660195911> et fais la commande "/tea", je serais ravie de te servir.'
-            'café': 'Tu veux un café ? Viens dans <#1353348735660195911> et fais la commande "/coffee", je serais ravie de te servir ce café.'
-            'cookie': 'Tu veux un cookie ? Viens dans <#1353348735660195911> et fais la commande "/cookie", je serais ravie de faire chauffer le four pour toi'
+            'bot': 'Oui, je suis là ! Toutes les commandes des bots se font ici : <#1160229527608369213>, sauf si tu veux me parler à moi, c\'est ici : <#1353348735660195911>.',
+            'calin': 'Tu veux un câlin ? Viens dans <#1353348735660195911> et fais la commande "/hug", je serais ravie de te faire un câlin.',
+            'thé': 'Tu veux un thé ? Viens dans <#1353348735660195911> et fais la commande "/tea", je serais ravie de te servir.',
+            'café': 'Tu veux un café ? Viens dans <#1353348735660195911> et fais la commande "/coffee", je serais ravie de te servir ce café.',
+            'cookie': 'Tu veux un cookie ? Viens dans <#1353348735660195911> et fais la commande "/cookie", je serais ravie de faire chauffer le four pour toi.'
         };
 
         // Convertit le message en minuscules pour une détection insensible à la casse
