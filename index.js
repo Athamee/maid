@@ -9,7 +9,7 @@ const { Routes } = require('discord.js');
 // Importe les modules Node.js pour gérer les fichiers et le serveur Express
 const path = require('path');
 const express = require('express');
-const fs = require('fs').promises; // Changé à fs.promises pour async
+const fs = require('fs').promises;
 
 // Initialise le serveur Express pour le monitoring et health checks
 const app = express();
@@ -26,11 +26,14 @@ app.get('/', (req, res) => res.send('Ta servante dévouée, Maid babe, est vivan
 const port = process.env.PORT || 8000;
 app.listen(port, () => console.log(`Serveur Express démarré sur le port ${port}`));
 
-// Crée le client Discord avec les intents Guilds et GuildMembers
+// Crée le client Discord avec tous les intents nécessaires
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildModeration // Ajouté pour la modération des membres
     ]
 });
 
@@ -39,12 +42,12 @@ client.commands = new Collection();
 
 // Charge dynamiquement les commandes depuis le dossier "commands"
 const commandsPath = path.join(__dirname, 'commands');
-const commandFiles = require('fs').readdirSync(commandsPath).filter(file => file.endsWith('.js')); // Utilise fs synchrone ici comme avant
+const commandFiles = require('fs').readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
 for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
     const command = require(filePath);
-    client.commands.set(command.data.name, command); // Ajoute chaque commande à la collection
+    client.commands.set(command.data.name, command);
 }
 
 // Fonction pour déployer les commandes Slash sur Discord
@@ -53,15 +56,15 @@ const deployCommands = async () => {
     for (const file of commandFiles) {
         const filePath = path.join(commandsPath, file);
         const command = require(filePath);
-        commands.push(command.data.toJSON()); // Convertit les commandes en JSON pour l’API
+        commands.push(command.data.toJSON());
     }
 
-    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN); // Initialise l’API REST
+    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
     try {
         console.log('Déploiement des commandes Slash...');
         await rest.put(
-            Routes.applicationCommands(process.env.ID_APP), // Déploie globalement les commandes
+            Routes.applicationCommands(process.env.ID_APP),
             { body: commands }
         );
         console.log('Commandes déployées avec succès !');
@@ -74,10 +77,9 @@ const deployCommands = async () => {
 async function initializeWarnsFile() {
     const warnFile = path.join(__dirname, 'warns.json');
     try {
-        await fs.access(warnFile); // Vérifie si le fichier existe
+        await fs.access(warnFile);
         console.log('Fichier warns.json trouvé.');
     } catch (error) {
-        // S’il n’existe pas, crée un fichier vierge
         await fs.writeFile(warnFile, '{}', 'utf8');
         console.log('Fichier warns.json créé avec succès.');
     }
@@ -90,34 +92,34 @@ client.once('ready', () => {
 
 // Gère les interactions (commandes Slash)
 client.on('interactionCreate', async interaction => {
-    if (!interaction.isCommand()) return; // Ignore si ce n’est pas une commande
+    if (!interaction.isCommand()) return;
 
-    const command = client.commands.get(interaction.commandName); // Récupère la commande
+    const command = client.commands.get(interaction.commandName);
 
-    if (!command) return; // Ignore si la commande n’existe pas
+    if (!command) return;
 
     try {
-        await command.execute(interaction); // Exécute la commande
+        await command.execute(interaction);
     } catch (error) {
-        // Gère les erreurs sans faire planter le bot
         console.error('Erreur dans la commande :', error);
         if (!interaction.replied && !interaction.deferred) {
-            // Si aucune réponse n’a été envoyée, envoie un message d’erreur éphémère
             await interaction.reply({ content: 'Erreur lors de l’exécution de la commande !', ephemeral: true });
         } else if (interaction.deferred) {
-            // Si la réponse est différée, modifie-la avec un message d’erreur
             await interaction.editReply('Erreur lors de l’exécution de la commande !');
         }
     }
 });
 
+// Charge le gestionnaire de messages
+require('./handlers/messageHandler')(client);
+
 // Initialise le fichier warns.json puis connecte le bot
 initializeWarnsFile()
-    .then(() => deployCommands()) // Déploie les commandes après l’initialisation
+    .then(() => deployCommands())
     .then(() => {
         client.login(process.env.TOKEN).catch((error) => {
             console.error('Erreur lors de la connexion à Discord :', error);
-            process.exit(1); // Quitte si la connexion échoue
+            process.exit(1);
         });
     })
     .catch((error) => {
