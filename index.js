@@ -9,7 +9,7 @@ const { Routes } = require('discord.js');
 // Importe les modules Node.js pour gérer les fichiers et le serveur Express
 const path = require('path');
 const express = require('express');
-const fs = require('fs');
+const fs = require('fs').promises; // Changé à fs.promises pour async
 
 // Initialise le serveur Express pour le monitoring et health checks
 const app = express();
@@ -39,7 +39,7 @@ client.commands = new Collection();
 
 // Charge dynamiquement les commandes depuis le dossier "commands"
 const commandsPath = path.join(__dirname, 'commands');
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+const commandFiles = require('fs').readdirSync(commandsPath).filter(file => file.endsWith('.js')); // Utilise fs synchrone ici comme avant
 
 for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
@@ -70,8 +70,18 @@ const deployCommands = async () => {
     }
 };
 
-// Lance le déploiement des commandes au démarrage
-deployCommands();
+// Fonction pour initialiser warns.json s’il n’existe pas
+async function initializeWarnsFile() {
+    const warnFile = path.join(__dirname, 'warns.json');
+    try {
+        await fs.access(warnFile); // Vérifie si le fichier existe
+        console.log('Fichier warns.json trouvé.');
+    } catch (error) {
+        // S’il n’existe pas, crée un fichier vierge
+        await fs.writeFile(warnFile, '{}', 'utf8');
+        console.log('Fichier warns.json créé avec succès.');
+    }
+}
 
 // Événement déclenché quand le bot est prêt
 client.once('ready', () => {
@@ -101,8 +111,16 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-// Connecte le bot à Discord avec le token
-client.login(process.env.TOKEN).catch((error) => {
-    console.error('Erreur lors de la connexion à Discord :', error);
-    process.exit(1); // Quitte si la connexion échoue
-});
+// Initialise le fichier warns.json puis connecte le bot
+initializeWarnsFile()
+    .then(() => deployCommands()) // Déploie les commandes après l’initialisation
+    .then(() => {
+        client.login(process.env.TOKEN).catch((error) => {
+            console.error('Erreur lors de la connexion à Discord :', error);
+            process.exit(1); // Quitte si la connexion échoue
+        });
+    })
+    .catch((error) => {
+        console.error('Erreur lors de l’initialisation :', error);
+        process.exit(1);
+    });
