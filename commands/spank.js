@@ -9,7 +9,7 @@ const axios = require('axios');
 module.exports = {
     // Définit la commande Slash /hug
     data: new SlashCommandBuilder()
-        .setName('tea')
+        .setName('spank')
         .setDescription('Sert un thé à un.e membre ou à toi-même')
         .addUserOption(option =>
             option
@@ -37,11 +37,11 @@ module.exports = {
         const folderId = process.env.PCLOUD_FOLDER_ID_SPANK;
 
         // Log pour déboguer
-        console.log('Début de /hug - Email:', email, 'Password:', password ? '[masqué]' : 'undefined', 'Folder ID:', folderId);
+        console.log('Début de /spank - Email:', email, 'Password:', password ? '[masqué]' : 'undefined', 'Folder ID:', folderId);
 
         if (!folderId) {
             console.log('Erreur : folderId manquant');
-            return interaction.reply('Erreur : ID du dossier pour /tea non configuré !');
+            return interaction.reply('Erreur : ID du dossier pour /spank non configuré !');
         }
 
         // Récupère l’expéditeur et la cible
@@ -53,8 +53,8 @@ module.exports = {
 
         // Définit le texte avec les mentions
         const messageContent = sender.id === target.id
-            ? `<@${sender.id}> boit un thé !`
-            : `<@${sender.id}> sert un thé à <@${target.id}> !`;
+            ? `<@${sender.id}> se met une fessée !`
+            : `<@${sender.id}> claque le Fiaf de <@${target.id}> !`;
 
         // Log pour vérifier ce qui est envoyé
         console.log('Message envoyé :', messageContent);
@@ -78,7 +78,7 @@ module.exports = {
 
             if (gifs.length === 0) {
                 console.log('Aucun GIF trouvé');
-                return interaction.reply('Aucun GIF trouvé dans le dossier /tea !');
+                return interaction.reply('Aucun GIF trouvé dans le dossier /spank !');
             }
 
             // Choisit un GIF aléatoire
@@ -103,8 +103,8 @@ module.exports = {
                 .setColor('#FF69B4');
 
             // Crée un attachment pour le GIF
-            const attachment = new AttachmentBuilder(gifUrl, { name: 'tea.gif' });
-            embed.setImage('attachment://tea.gif');
+            const attachment = new AttachmentBuilder(gifUrl, { name: 'spank.gif' });
+            embed.setImage('attachment://spank.gif');
 
             // Envoie tout en une seule fois avec reply
             await interaction.reply({
@@ -112,7 +112,7 @@ module.exports = {
                 embeds: [embed],
                 files: [attachment]
             });
-            console.log('/tea served');
+            console.log('/spank super well done !');
         } catch (error) {
             console.error('Erreur dans /tea :', error.response ? error.response.data : error.message);
             await interaction.reply('Erreur lors de la récupération du GIF !');

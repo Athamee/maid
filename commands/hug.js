@@ -112,7 +112,7 @@ module.exports = {
                 embeds: [embed],
                 files: [attachment]
             });
-            console.log('/hug réussi');
+            console.log('/hug done !');
         } catch (error) {
             console.error('Erreur dans /hug :', error.response ? error.response.data : error.message);
             await interaction.reply('Erreur lors de la récupération du GIF !');

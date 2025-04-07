@@ -112,7 +112,7 @@ module.exports = {
                 embeds: [embed],
                 files: [attachment]
             });
-            console.log('/tea served');
+            console.log('/tea served !');
         } catch (error) {
             console.error('Erreur dans /tea :', error.response ? error.response.data : error.message);
             await interaction.reply('Erreur lors de la récupération du GIF !');

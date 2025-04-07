@@ -7,7 +7,7 @@ const warnFile = path.join(__dirname, '../warns.json');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('uploadwarns')
+        .setName('upwarns')
         .setDescription('Charge un fichier warns.json pour mettre à jour les avertissements.')
         .addAttachmentOption(option =>
             option.setName('fichier')
