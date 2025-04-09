@@ -10,7 +10,7 @@ module.exports = {
     // Définit la commande Slash /hug
     data: new SlashCommandBuilder()
         .setName('spank')
-        .setDescription('Sert un thé à un.e membre ou à toi-même')
+        .setDescription('Claque un Fiak, ou le tien !')
         .addUserOption(option =>
             option
                 .setName('membre')
@@ -54,7 +54,7 @@ module.exports = {
         // Définit le texte avec les mentions
         const messageContent = sender.id === target.id
             ? `<@${sender.id}> se met une fessée !`
-            : `<@${sender.id}> claque le Fiaf de <@${target.id}> !`;
+            : `<@${sender.id}> claque le Fiak de <@${target.id}> !`;
 
         // Log pour vérifier ce qui est envoyé
         console.log('Message envoyé :', messageContent);
