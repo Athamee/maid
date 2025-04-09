@@ -1,154 +1,272 @@
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, PermissionsBitField } = require('discord.js');
+const fs = require('fs').promises;
 const path = require('path');
-const { createTicketChannel, closeTicketChannel } = require('../utils/ticketUtils');
 
-module.exports = {
-    // Définit la commande Slash /ticket
-    data: new SlashCommandBuilder()
-        .setName('ticket')
-        .setDescription('Ouvrir un ticket en sélectionnant un type avec un bouton (réservé aux modérateurs)'),
-
-    // Fonction exécutée quand la commande est utilisée
-    async execute(interaction) {
-        const modoRoleId = process.env.MODO;
-        const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
-        const hasModoRole = modoRoleId && interaction.member.roles.cache.has(modoRoleId);
-
-        // Vérifie les permissions
-        if (!isAdmin && !hasModoRole) {
-            console.warn(`[Permissions] Accès refusé pour ${interaction.member.user.tag} (pas admin ni modo)`);
-            return interaction.reply({
-                content: 'Vous n\'avez pas la permission d\'utiliser cette commande.',
-                ephemeral: true
-            });
+async function createTicketChannel(client, guild, member, ticketType, customMessageOptions = null) {
+    try {
+        const categoryId = process.env.TICKET_CATEGORY_ID;
+        if (!categoryId) {
+            throw new Error("L'ID de la catégorie des tickets (TICKET_CATEGORY_ID) n'est pas défini dans les variables d'environnement.");
         }
 
-        console.log(`Début de /ticket par ${interaction.member.user.tag}`);
+        console.log(`Création d’un ticket pour ${member.user.tag} dans la catégorie ${categoryId}`);
 
-        try {
-            await interaction.deferReply({ ephemeral: true });
-
-            // Crée le bouton pour ouvrir un ticket
-            const buttonNewTicket = new ButtonBuilder()
-                .setCustomId('ticket_type_6')
-                .setLabel('Nouveau Ticket')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('🎫');
-
-            const row = new ActionRowBuilder().addComponents(buttonNewTicket);
-
-            // Ajoute une image (vérifie que ticket.png existe)
-            const imagePath = path.join(__dirname, '..', 'img', 'ticket.png');
-            const attachment = new AttachmentBuilder(imagePath, { name: 'ticket_image.png' });
-
-            await interaction.channel.send({
-                components: [row],
-                files: [attachment],
-            });
-
-            await interaction.editReply({
-                content: 'Le message pour ouvrir un ticket a été envoyé.',
-                ephemeral: true
-            });
-            console.log(`Message de ticket envoyé avec succès dans ${interaction.channel.id}`);
-        } catch (error) {
-            console.error('Erreur dans /ticket :', error.message, error.stack);
-            await interaction.editReply({
-                content: 'Une erreur est survenue lors de l\'exécution de la commande.',
-                ephemeral: true
-            });
+        const category = await guild.channels.fetch(categoryId);
+        if (!category || category.type !== ChannelType.GuildCategory) {
+            throw new Error(`Catégorie introuvable ou non valide : ${categoryId}`);
         }
-    },
 
-    // Gestion des interactions avec les boutons
-    async handleButtonInteraction(interaction) {
-        if (interaction.customId === 'ticket_type_6') {
-            console.log(`Bouton ticket_type_6 cliqué par ${interaction.member.user.tag}`);
-            try {
-                const member = interaction.member;
-                const guild = interaction.guild;
+        const supportRoleIds = process.env.MODO ? process.env.MODO.split(',').map(id => id.trim()) : [];
+        if (supportRoleIds.length === 0) {
+            console.warn('MODO n’est pas défini ou vide dans les variables d’environnement. Aucun rôle de support ajouté.');
+        }
 
-                // Définir les rôles à mentionner et le contenu du ticket
-                const mentionRoles = '<@&1323677074631950528>';
-                const content = `<@${member.id}>, ${mentionRoles}`;
+        const ticketChannel = await guild.channels.create({
+            name: `🏷🔗${member.user.username}`.slice(0, 32),
+            type: ChannelType.GuildText,
+            parent: category.id,
+            topic: `Ticket ouvert par ${member.user.tag} (${ticketType})`,
+            permissionOverwrites: [
+                {
+                    id: guild.id,
+                    deny: [PermissionsBitField.Flags.ViewChannel],
+                },
+                {
+                    id: member.id,
+                    allow: [
+                        PermissionsBitField.Flags.ViewChannel,
+                        PermissionsBitField.Flags.SendMessages,
+                        PermissionsBitField.Flags.ReadMessageHistory,
+                        PermissionsBitField.Flags.AttachFiles,
+                        PermissionsBitField.Flags.AddReactions,
+                        PermissionsBitField.Flags.UseExternalEmojis,
+                    ],
+                },
+                {
+                    id: client.user.id,
+                    allow: [
+                        PermissionsBitField.Flags.ViewChannel,
+                        PermissionsBitField.Flags.SendMessages,
+                        PermissionsBitField.Flags.ReadMessageHistory,
+                        PermissionsBitField.Flags.ManageChannels,
+                    ],
+                },
+                ...supportRoleIds.map(roleId => ({
+                    id: roleId,
+                    allow: [
+                        PermissionsBitField.Flags.ViewChannel,
+                        PermissionsBitField.Flags.SendMessages,
+                        PermissionsBitField.Flags.ManageChannels,
+                        PermissionsBitField.Flags.ReadMessageHistory,
+                        PermissionsBitField.Flags.AttachFiles,
+                        PermissionsBitField.Flags.AddReactions,
+                        PermissionsBitField.Flags.UseExternalEmojis,
+                    ],
+                })),
+            ],
+        });
 
-                // Construire l'embed pour le ticket
-                const embed = new EmbedBuilder()
-                    .setDescription(`
-                        ## Bienvenue sur le Donjon !
-                        > Afin de débuter ton intégration, nous t'invitons à remplir ce formulaire et à répondre à **toutes** les questions.
-                        > Cela nous aide à voir que tu as lu le règlement.
+        const closeButton = new ButtonBuilder()
+            .setCustomId('close_ticket')
+            .setLabel('Fermer le ticket')
+            .setStyle(ButtonStyle.Danger);
+        const row = new ActionRowBuilder().addComponents(closeButton);
 
-                        **Si tu n'as répondu à ce formulaire dans les 24h, tu seras simplement kick du serveur.**
+        await ticketChannel.send({
+            content: customMessageOptions?.content || `Bonjour ${member}, votre ticket a été ouvert.`,
+            embeds: customMessageOptions?.embeds || [],
+            components: customMessageOptions?.components || [row],
+        });
 
-                        > - Pseudo :
-                        ↳
-                        > - Âge :
-                        ↳
-                        > - Sexe/genre :
-                        ↳
-                        > - Comment as-tu connu le Donjon ?
-                        ↳
-                        > - Pourquoi nous rejoindre ?
-                        ↳
-                        > - Sous quelles conditions peux-tu avoir accès aux messages privés ?
-                        ↳
-                        > - As-tu lu et compris le règlement ?
-                        ↳
-                        > - Acceptes-tu le règlement ?
-                        ↳
-                        > - Comprends-tu les sanctions encourues en cas de manquement au règlement ?
-                        ↳`)
-                    .setColor('#FFAA00');
+        console.log(`Ticket créé avec succès : ${ticketChannel.name} (ID: ${ticketChannel.id})`);
+        return ticketChannel;
 
-                // Crée le ticket avec le contenu et l’embed
-                await createTicketChannel(interaction.client, guild, member, 'Nouveau', {
-                    content: `<@${member.id}>, <@&1094318706487734483>`,
-                    embeds: [embed],
-                });
+    } catch (error) {
+        console.error('Erreur lors de la création du salon de ticket :', error.message, error.stack);
+        throw error;
+    }
+}
 
-                // Répond à l’interaction
-                await interaction.reply({
-                    content: 'Votre ticket a été créé avec succès.',
-                    ephemeral: true
-                });
-                console.log(`Ticket créé pour ${member.user.tag}`);
-            } catch (error) {
-                console.error('Erreur lors de la création du ticket :', error.message, error.stack);
-                await interaction.reply({
-                    content: 'Une erreur est survenue lors de la création de votre ticket.',
-                    ephemeral: true
+async function fetchAllMessages(channel) {
+    let allMessages = [];
+    let lastId = null;
+    while (true) {
+        const messages = await channel.messages.fetch({ limit: 100, before: lastId });
+        allMessages = allMessages.concat(Array.from(messages.values()));
+        if (messages.size < 100) break;
+        lastId = messages.last().id;
+    }
+    return allMessages;
+}
+
+async function closeTicketChannel(channel, reason) {
+    try {
+        console.log(`Tentative de fermeture du ticket ${channel.name} pour raison : "${reason}"`);
+
+        const messages = await fetchAllMessages(channel);
+        const ticketOwner = channel.topic.match(/Ticket ouvert par (.+?) \(/)?.[1] || 'Inconnu';
+        const sortedMessages = messages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+
+        // Générer un hash couleur unique pour chaque auteur
+        const getAuthorColor = (authorId) => {
+            const hash = authorId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const hue = hash % 360;
+            return `hsl(${hue}, 70%, 60%)`;
+        };
+
+        // Générer le contenu HTML
+        let htmlContent = `
+            <!DOCTYPE html>
+            <html lang="fr">
+            <head>
+                <meta charset="UTF-8">
+                <title>Transcription du ticket ${channel.name}</title>
+                <style>
+                    body {
+                        font-family: 'Segoe UI', Arial, sans-serif;
+                        background-color: #2f3136;
+                        color: #dcddde;
+                        padding: 20px;
+                        margin: 0;
+                    }
+                    .container {
+                        max-width: 800px;
+                        margin: 0 auto;
+                        background-color: #36393f;
+                        border-radius: 8px;
+                        padding: 20px;
+                        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+                    }
+                    .ticket-info {
+                        border-bottom: 2px solid #4f545c;
+                        padding-bottom: 15px;
+                        margin-bottom: 20px;
+                    }
+                    .ticket-info h1 {
+                        margin: 0;
+                        color: #ffffff;
+                        font-size: 24px;
+                    }
+                    .ticket-info p {
+                        margin: 5px 0;
+                        color: #b9bbbe;
+                    }
+                    .message {
+                        padding: 10px;
+                        margin: 5px 0;
+                        border-radius: 5px;
+                        background-color: #40444b;
+                    }
+                    .author {
+                        font-weight: bold;
+                        margin-right: 10px;
+                    }
+                    .timestamp {
+                        color: #72767d;
+                        font-size: 0.85em;
+                    }
+                    .content {
+                        margin: 5px 0;
+                        word-wrap: break-word;
+                    }
+                    .embed {
+                        background-color: #202225;
+                        padding: 10px;
+                        border-left: 4px solid #5865f2;
+                        margin-top: 5px;
+                        border-radius: 3px;
+                    }
+                    .embed-title { color: #ffffff; font-weight: bold; }
+                    .embed-description { color: #dcddde; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="ticket-info">
+                        <h1>Transcription du ticket : ${channel.name}</h1>
+                        <p><strong>Serveur :</strong> ${channel.guild.name}</p>
+                        <p><strong>Ouvert par :</strong> ${ticketOwner}</p>
+                        <p><strong>Raison de fermeture :</strong> ${reason}</p>
+                        <p><strong>Date de fermeture :</strong> ${new Date().toLocaleString()}</p>
+                    </div>
+        `;
+
+        sortedMessages.forEach(msg => {
+            const authorColor = getAuthorColor(msg.author.id);
+            htmlContent += `
+                <div class="message">
+                    <span class="author" style="color: ${authorColor}">${msg.author.tag}</span>
+                    <span class="timestamp">[${msg.createdAt.toLocaleString()}]</span>
+                    <div class="content">${msg.content || '[Contenu vide]'}</div>
+            `;
+            
+            // Ajouter les embeds s’il y en a
+            if (msg.embeds.length > 0) {
+                msg.embeds.forEach(embed => {
+                    htmlContent += `
+                        <div class="embed">
+                            ${embed.title ? `<div class="embed-title">${embed.title}</div>` : ''}
+                            ${embed.description ? `<div class="embed-description">${embed.description}</div>` : ''}
+                        </div>
+                    `;
                 });
             }
-        }
-    },
 
-    // Gestion de la fermeture des tickets
-    async handleCloseTicket(interaction) {
-        const member = interaction.member;
-        const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
-        const modoRoleIds = process.env.MODO ? process.env.MODO.split(',').map(id => id.trim()) : [];
-        const hasModoRole = modoRoleIds.some(roleId => member.roles.cache.has(roleId));
+            htmlContent += `</div>`;
+        });
 
-        if (!isAdmin && !hasModoRole) {
-            console.warn(`[Permissions] ${member.user.tag} a essayé de fermer un ticket sans permission`);
-            return interaction.reply({
-                content: "Vous n'avez pas la permission de fermer ce ticket.",
-                ephemeral: true
-            });
+        htmlContent += `
+                </div>
+            </body>
+            </html>
+        `;
+
+        // Nom de fichier basé sur le membre
+        const safeOwnerName = ticketOwner.replace(/[^a-zA-Z0-9_-]/g, '_'); // Remplace les caractères spéciaux
+        const filePath = path.join(__dirname, `ticket_${safeOwnerName}_${channel.id}.html`);
+        await fs.writeFile(filePath, htmlContent, 'utf8');
+
+        const closeEmbed = new EmbedBuilder()
+            .setTitle('Ticket fermé')
+            .setDescription(`Le ticket a été fermé pour la raison suivante :\n\n"${reason}"`)
+            .setColor('#FF0000');
+
+        await channel.send({ embeds: [closeEmbed] });
+
+        const logGuildId = process.env.TICKET_LOG_GUILD_ID;
+        const logChannelId = process.env.TICKET_LOG_CHANNEL_ID;
+
+        if (!logGuildId || !logChannelId) {
+            console.warn('TICKET_LOG_GUILD_ID ou TICKET_LOG_CHANNEL_ID non défini(s). Transcription non envoyée.');
+        } else {
+            const logGuild = channel.client.guilds.cache.get(logGuildId);
+            if (!logGuild) {
+                console.error(`Serveur cible ${logGuildId} introuvable. Le bot doit être présent sur ce serveur.`);
+            } else {
+                const logChannel = logGuild.channels.cache.get(logChannelId);
+                if (!logChannel || logChannel.type !== ChannelType.GuildText) {
+                    console.error(`Salon textuel ${logChannelId} introuvable ou non valide dans le serveur ${logGuildId}.`);
+                } else {
+                    await logChannel.send({
+                        content: `**Transcription du ticket ${channel.name}**\nOuvert par : ${ticketOwner}\nRaison de fermeture : "${reason}"`,
+                        files: [filePath]
+                    });
+                    console.log(`Transcription HTML envoyée dans le salon ${logChannel.name} (ID: ${logChannel.id}) du serveur ${logGuild.name}`);
+                }
+            }
         }
 
-        try {
-            const channel = interaction.channel;
-            await closeTicketChannel(channel, `Ticket fermé par ${member.user.tag}`);
-            console.log(`Ticket ${channel.name} fermé par ${member.user.tag}`);
-        } catch (error) {
-            console.error('Erreur lors de la fermeture du ticket :', error.message, error.stack);
-            await interaction.reply({
-                content: 'Une erreur est survenue lors de la fermeture du ticket.',
-                ephemeral: true
-            });
-        }
-    },
+        await fs.unlink(filePath);
+        await channel.delete(`Ticket fermé : ${reason}`);
+        console.log(`Ticket fermé avec succès : ${channel.name}`);
+
+    } catch (error) {
+        console.error('Erreur lors de la fermeture du ticket :', error.message, error.stack);
+        throw error;
+    }
+}
+
+module.exports = {
+    createTicketChannel,
+    closeTicketChannel
 };

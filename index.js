@@ -62,7 +62,7 @@ async function loadCommands() {
     }
 }
 
-// Fonction pour déployer les commandes Slash sur Discord
+// Déploie les commandes Slash sur Discord
 async function deployCommands() {
     const commands = [];
     for (const [name, command] of client.commands) {
@@ -83,7 +83,7 @@ async function deployCommands() {
     }
 }
 
-// Fonction pour initialiser warns.json s’il n’existe pas
+// Initialise warns.json s’il n’existe pas
 async function initializeWarnsFile() {
     const warnFile = path.join(__dirname, 'warns.json');
     try {
@@ -148,7 +148,7 @@ client.on('interactionCreate', async interaction => {
 // Charge le gestionnaire de messages
 require('./handlers/messageHandler')(client);
 
-// Initialise le bot de manière asynchrone
+// Démarre le bot de manière asynchrone
 async function startBot() {
     try {
         await initializeWarnsFile();

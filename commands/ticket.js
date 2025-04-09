@@ -1,7 +1,6 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
-const { createTicketChannel, closeTicketChannel } = require('../utils/ticketUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -60,6 +59,9 @@ module.exports = {
         if (interaction.customId === 'ticket_type_6') {
             console.log(`Bouton ticket_type_6 cliqué par ${interaction.member.user.tag}`);
             try {
+                const ticketUtils = require('../utils/ticketUtils');
+                console.log('ticketUtils chargé dans handleButtonInteraction :', ticketUtils);
+
                 const member = interaction.member;
                 const guild = interaction.guild;
 
@@ -94,7 +96,7 @@ module.exports = {
                         ↳`)
                     .setColor('#FFAA00');
 
-                await createTicketChannel(interaction.client, guild, member, 'Nouveau', {
+                await ticketUtils.createTicketChannel(interaction.client, guild, member, 'Nouveau', {
                     content: `<@${member.id}>, <@&1094318706487734483>`,
                     embeds: [embed],
                 });
@@ -115,29 +117,35 @@ module.exports = {
     },
 
     async handleCloseTicket(interaction) {
-        const member = interaction.member;
-        const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
-        const modoRoleIds = process.env.MODO ? process.env.MODO.split(',').map(id => id.trim()) : [];
-        const hasModoRole = modoRoleIds.some(roleId => member.roles.cache.has(roleId));
+        if (interaction.customId === 'close_ticket') {
+            console.log(`Bouton close_ticket cliqué par ${interaction.member.user.tag}`);
+            try {
+                const ticketUtils = require('../utils/ticketUtils');
+                console.log('ticketUtils chargé dans handleCloseTicket :', ticketUtils);
 
-        if (!isAdmin && !hasModoRole) {
-            console.warn(`[Permissions] ${member.user.tag} a essayé de fermer un ticket sans permission`);
-            return interaction.reply({
-                content: 'Vous n\'avez pas la permission de fermer ce ticket.',
-                ephemeral: true
-            });
-        }
+                const member = interaction.member;
+                const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
+                const modoRoleIds = process.env.MODO ? process.env.MODO.split(',').map(id => id.trim()) : [];
+                const hasModoRole = modoRoleIds.some(roleId => member.roles.cache.has(roleId));
 
-        try {
-            const channel = interaction.channel;
-            await closeTicketChannel(channel, `Ticket fermé par ${member.user.tag}`);
-            console.log(`Ticket ${channel.name} fermé par ${member.user.tag}`);
-        } catch (error) {
-            console.error('Erreur lors de la fermeture du ticket :', error.message, error.stack);
-            await interaction.reply({
-                content: 'Une erreur est survenue lors de la fermeture du ticket.',
-                ephemeral: true
-            });
+                if (!isAdmin && !hasModoRole) {
+                    console.warn(`[Permissions] ${member.user.tag} a essayé de fermer un ticket sans permission`);
+                    return interaction.reply({
+                        content: 'Vous n\'avez pas la permission de fermer ce ticket.',
+                        ephemeral: true
+                    });
+                }
+
+                const channel = interaction.channel;
+                await ticketUtils.closeTicketChannel(channel, `Ticket fermé par ${member.user.tag}`);
+                console.log(`Ticket ${channel.name} fermé par ${member.user.tag}`);
+            } catch (error) {
+                console.error('Erreur lors de la fermeture du ticket :', error.message, error.stack);
+                await interaction.reply({
+                    content: 'Une erreur est survenue lors de la fermeture du ticket.',
+                    ephemeral: true
+                });
+            }
         }
     },
 };
