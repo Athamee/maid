@@ -2,10 +2,11 @@
 if (!process.env.RENDER) {
     require('dotenv').config();
 }
+
 // Importe les modules Discord.js pour le bot et les commandes
-const { Client, GatewayIntentBits, Collection } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, Routes } = require('discord.js');
 const { REST } = require('@discordjs/rest');
-const { Routes } = require('discord.js');
+
 // Importe les modules Node.js pour gérer les fichiers et le serveur Express
 const path = require('path');
 const express = require('express');
@@ -33,7 +34,7 @@ const client = new Client({
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildModeration // Ajouté pour la modération des membres
+        GatewayIntentBits.GuildModeration
     ]
 });
 
@@ -47,7 +48,12 @@ const commandFiles = require('fs').readdirSync(commandsPath).filter(file => file
 for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
     const command = require(filePath);
+    if (!command.data || !command.data.name) {
+        console.error(`Erreur : La commande dans ${file} n'a pas de propriété 'data' ou 'data.name' valide`);
+        continue;
+    }
     client.commands.set(command.data.name, command);
+    console.log(`Commande chargée : ${command.data.name}`);
 }
 
 // Fonction pour déployer les commandes Slash sur Discord
@@ -56,7 +62,9 @@ const deployCommands = async () => {
     for (const file of commandFiles) {
         const filePath = path.join(commandsPath, file);
         const command = require(filePath);
-        commands.push(command.data.toJSON());
+        if (command.data) {
+            commands.push(command.data.toJSON());
+        }
     }
 
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
@@ -69,7 +77,7 @@ const deployCommands = async () => {
         );
         console.log('Commandes déployées avec succès !');
     } catch (error) {
-        console.error('Erreur lors du déploiement des commandes :', error);
+        console.error('Erreur lors du déploiement des commandes :', error.message, error.stack);
     }
 };
 
@@ -90,22 +98,42 @@ client.once('ready', () => {
     console.log('Maid babe est en ligne !');
 });
 
-// Gère les interactions (commandes Slash)
+// Gère toutes les interactions (commandes Slash et boutons)
 client.on('interactionCreate', async interaction => {
-    if (!interaction.isCommand()) return;
+    // Gestion des commandes Slash
+    if (interaction.isCommand()) {
+        const command = client.commands.get(interaction.commandName);
+        if (!command) {
+            console.warn(`Commande inconnue : ${interaction.commandName}`);
+            return;
+        }
 
-    const command = client.commands.get(interaction.commandName);
+        try {
+            console.log(`Commande exécutée : ${interaction.commandName} par ${interaction.user.tag}`);
+            await command.execute(interaction);
+        } catch (error) {
+            console.error(`Erreur dans la commande ${interaction.commandName} :`, error.message, error.stack);
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({ content: 'Erreur lors de l’exécution de la commande !', ephemeral: true });
+            } else if (interaction.deferred) {
+                await interaction.editReply({ content: 'Erreur lors de l’exécution de la commande !' });
+            }
+        }
+    }
 
-    if (!command) return;
-
-    try {
-        await command.execute(interaction);
-    } catch (error) {
-        console.error('Erreur dans la commande :', error);
-        if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({ content: 'Erreur lors de l’exécution de la commande !', ephemeral: true });
-        } else if (interaction.deferred) {
-            await interaction.editReply('Erreur lors de l’exécution de la commande !');
+    // Gestion des interactions de boutons
+    if (interaction.isButton()) {
+        const command = client.commands.get('ticket'); // On suppose que les boutons sont liés à la commande "ticket"
+        if (command && command.handleButtonInteraction) {
+            try {
+                console.log(`Bouton cliqué : ${interaction.customId} par ${interaction.user.tag}`);
+                await command.handleButtonInteraction(interaction);
+            } catch (error) {
+                console.error(`Erreur dans handleButtonInteraction :`, error.message, error.stack);
+                if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({ content: 'Erreur lors du traitement du bouton !', ephemeral: true });
+                }
+            }
         }
     }
 });
@@ -113,16 +141,16 @@ client.on('interactionCreate', async interaction => {
 // Charge le gestionnaire de messages
 require('./handlers/messageHandler')(client);
 
-// Initialise le fichier warns.json puis connecte le bot
+// Initialise le fichier warns.json, déploie les commandes, puis connecte le bot
 initializeWarnsFile()
     .then(() => deployCommands())
     .then(() => {
         client.login(process.env.TOKEN).catch((error) => {
-            console.error('Erreur lors de la connexion à Discord :', error);
+            console.error('Erreur lors de la connexion à Discord :', error.message, error.stack);
             process.exit(1);
         });
     })
     .catch((error) => {
-        console.error('Erreur lors de l’initialisation :', error);
+        console.error('Erreur lors de l’initialisation :', error.message, error.stack);
         process.exit(1);
     });
