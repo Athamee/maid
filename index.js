@@ -41,30 +41,32 @@ const client = new Client({
 // Crée une collection pour stocker les commandes
 client.commands = new Collection();
 
-// Charge dynamiquement les commandes depuis le dossier "commands"
-const commandsPath = path.join(__dirname, 'commands');
-const commandFiles = require('fs').readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+// Charge dynamiquement les commandes de manière asynchrone
+async function loadCommands() {
+    const commandsPath = path.join(__dirname, 'commands');
+    const commandFiles = require('fs').readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
-for (const file of commandFiles) {
-    const filePath = path.join(commandsPath, file);
-    const command = require(filePath);
-    if (!command.data || !command.data.name) {
-        console.error(`Erreur : La commande dans ${file} n'a pas de propriété 'data' ou 'data.name' valide`);
-        continue;
+    for (const file of commandFiles) {
+        const filePath = path.join(commandsPath, file);
+        try {
+            const command = require(filePath);
+            if (!command.data || !command.data.name) {
+                console.error(`Erreur : La commande dans ${file} n'a pas de propriété 'data' ou 'data.name' valide`);
+                continue;
+            }
+            client.commands.set(command.data.name, command);
+            console.log(`Commande chargée : ${command.data.name}`);
+        } catch (error) {
+            console.error(`Erreur lors du chargement de ${file} :`, error.message, error.stack);
+        }
     }
-    client.commands.set(command.data.name, command);
-    console.log(`Commande chargée : ${command.data.name}`);
 }
 
 // Fonction pour déployer les commandes Slash sur Discord
-const deployCommands = async () => {
+async function deployCommands() {
     const commands = [];
-    for (const file of commandFiles) {
-        const filePath = path.join(commandsPath, file);
-        const command = require(filePath);
-        if (command.data) {
-            commands.push(command.data.toJSON());
-        }
+    for (const [name, command] of client.commands) {
+        commands.push(command.data.toJSON());
     }
 
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
@@ -79,7 +81,7 @@ const deployCommands = async () => {
     } catch (error) {
         console.error('Erreur lors du déploiement des commandes :', error.message, error.stack);
     }
-};
+}
 
 // Fonction pour initialiser warns.json s’il n’existe pas
 async function initializeWarnsFile() {
@@ -123,13 +125,18 @@ client.on('interactionCreate', async interaction => {
 
     // Gestion des interactions de boutons
     if (interaction.isButton()) {
-        const command = client.commands.get('ticket'); // On suppose que les boutons sont liés à la commande "ticket"
-        if (command && command.handleButtonInteraction) {
+        const command = client.commands.get('ticket');
+        if (command) {
             try {
-                console.log(`Bouton cliqué : ${interaction.customId} par ${interaction.user.tag}`);
-                await command.handleButtonInteraction(interaction);
+                if (interaction.customId === 'ticket_type_6' && command.handleButtonInteraction) {
+                    console.log(`Bouton ticket_type_6 cliqué par ${interaction.user.tag}`);
+                    await command.handleButtonInteraction(interaction);
+                } else if (interaction.customId === 'close_ticket' && command.handleCloseTicket) {
+                    console.log(`Bouton close_ticket cliqué par ${interaction.user.tag}`);
+                    await command.handleCloseTicket(interaction);
+                }
             } catch (error) {
-                console.error(`Erreur dans handleButtonInteraction :`, error.message, error.stack);
+                console.error(`Erreur dans la gestion du bouton ${interaction.customId} :`, error.message, error.stack);
                 if (!interaction.replied && !interaction.deferred) {
                     await interaction.reply({ content: 'Erreur lors du traitement du bouton !', ephemeral: true });
                 }
@@ -141,16 +148,17 @@ client.on('interactionCreate', async interaction => {
 // Charge le gestionnaire de messages
 require('./handlers/messageHandler')(client);
 
-// Initialise le fichier warns.json, déploie les commandes, puis connecte le bot
-initializeWarnsFile()
-    .then(() => deployCommands())
-    .then(() => {
-        client.login(process.env.TOKEN).catch((error) => {
-            console.error('Erreur lors de la connexion à Discord :', error.message, error.stack);
-            process.exit(1);
-        });
-    })
-    .catch((error) => {
+// Initialise le bot de manière asynchrone
+async function startBot() {
+    try {
+        await initializeWarnsFile();
+        await loadCommands();
+        await deployCommands();
+        await client.login(process.env.TOKEN);
+    } catch (error) {
         console.error('Erreur lors de l’initialisation :', error.message, error.stack);
         process.exit(1);
-    });
+    }
+}
+
+startBot();
