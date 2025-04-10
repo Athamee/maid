@@ -119,7 +119,7 @@ async function initDatabase() {
             )
         `);
 
-        // Migration pour ajouter default_level_message si nécessaire
+        // Migration corrigée : pas d’interpolation JavaScript, juste des placeholders statiques
         await pool.query(`
             DO $$
             BEGIN
@@ -130,10 +130,10 @@ async function initDatabase() {
                     AND column_name = 'default_level_message'
                 ) THEN
                     ALTER TABLE xp_settings 
-                    ADD COLUMN default_level_message TEXT DEFAULT 'Félicitations {user}, tu es désormais niveau ${level} ! Continue d'explorer tes désirs intimes sur le Donjon. 😈 ';
+                    ADD COLUMN default_level_message TEXT DEFAULT 'Félicitations {user}, tu es désormais niveau {level} ! Continue d''explorer tes désirs intimes sur le Donjon. 😈';
                 ELSE
                     ALTER TABLE xp_settings 
-                    ALTER COLUMN default_level_message SET DEFAULT 'Félicitations {user}, tu es désormais niveau ${level} ! Continue d'explorer tes désirs intimes sur le Donjon. 😈 ';
+                    ALTER COLUMN default_level_message SET DEFAULT 'Félicitations {user}, tu es désormais niveau {level} ! Continue d''explorer tes désirs intimes sur le Donjon. 😈';
                 END IF;
             END;
             $$;
