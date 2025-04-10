@@ -7,6 +7,7 @@ module.exports = {
         .setName('xpsettings')
         .setDescription('Régler ou voir les gains d’XP (admins uniquement)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+        // Commandes existantes
         .addSubcommand(subcommand =>
             subcommand.setName('set-message').setDescription('Définir l’XP par message')
                 .addIntegerOption(option => option.setName('xp').setDescription('Valeur d’XP par message').setRequired(true).setMinValue(0))
@@ -51,6 +52,23 @@ module.exports = {
         )
         .addSubcommand(subcommand =>
             subcommand.setName('view').setDescription('Voir les paramètres actuels d’XP')
+        )
+        // Nouvelles sous-commandes pour effacer
+        .addSubcommand(subcommand =>
+            subcommand.setName('clear-channel').setDescription('Effacer le salon des annonces de niveau')
+        )
+        .addSubcommand(subcommand =>
+            subcommand.setName('clear-excluded-roles').setDescription('Effacer la liste des rôles exclus')
+        )
+        .addSubcommand(subcommand =>
+            subcommand.setName('clear-no-camera').setDescription('Effacer la liste des salons sans caméra')
+        )
+        .addSubcommand(subcommand =>
+            subcommand.setName('clear-level-message').setDescription('Effacer le message personnalisé d’un niveau spécifique')
+                .addIntegerOption(option => option.setName('level').setDescription('Niveau à effacer').setRequired(true).setMinValue(1))
+        )
+        .addSubcommand(subcommand =>
+            subcommand.setName('clear-default-message').setDescription('Réinitialiser le message par défaut')
         ),
 
     async execute(interaction) {
@@ -79,6 +97,20 @@ module.exports = {
                         [guildId, level, message]
                     );
                     await interaction.reply({ content: `Message pour le niveau ${level} défini : "${message}"`, ephemeral: true });
+                } else if (subcommand === 'exclude-roles') {
+                    const roles = interaction.options.getString('roles').split(',').map(id => id.trim());
+                    await pool.query(
+                        'INSERT INTO xp_settings (guild_id, excluded_roles) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET excluded_roles = $2',
+                        [guildId, JSON.stringify(roles)]
+                    );
+                    await interaction.reply({ content: `Rôles exclus des XP : ${roles.map(id => `<@&${id}>`).join(', ')}`, ephemeral: true });
+                } else if (subcommand === 'set-no-camera') {
+                    const channels = interaction.options.getString('channels').split(',').map(id => id.trim());
+                    await pool.query(
+                        'INSERT INTO xp_settings (guild_id, no_camera_channels) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET no_camera_channels = $2',
+                        [guildId, JSON.stringify(channels)]
+                    );
+                    await interaction.reply({ content: `Caméra interdite dans : ${channels.map(id => `<#${id}>`).join(', ')}`, ephemeral: true });
                 } else if (subcommand === 'set-voice-role') {
                     const voiceChannel = interaction.options.getChannel('voice_channel');
                     const role = interaction.options.getRole('role');
@@ -96,20 +128,6 @@ module.exports = {
                         [guildId, voiceChannel.id, role.id, textChannel.id]
                     );
                     await interaction.reply({ content: `Rôle ${role} et canal ${textChannel} liés à ${voiceChannel}.`, ephemeral: true });
-                } else if (subcommand === 'exclude-roles') {
-                    const roles = interaction.options.getString('roles').split(',').map(id => id.trim());
-                    await pool.query(
-                        'INSERT INTO xp_settings (guild_id, excluded_roles) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET excluded_roles = $2',
-                        [guildId, JSON.stringify(roles)]
-                    );
-                    await interaction.reply({ content: `Rôles exclus des XP : ${roles.map(id => `<@&${id}>`).join(', ')}`, ephemeral: true });
-                } else if (subcommand === 'set-no-camera') {
-                    const channels = interaction.options.getString('channels').split(',').map(id => id.trim());
-                    await pool.query(
-                        'INSERT INTO xp_settings (guild_id, no_camera_channels) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET no_camera_channels = $2',
-                        [guildId, JSON.stringify(channels)]
-                    );
-                    await interaction.reply({ content: `Caméra interdite dans : ${channels.map(id => `<#${id}>`).join(', ')}`, ephemeral: true });
                 } else if (subcommand === 'set-default-message') {
                     const message = interaction.options.getString('message');
                     if (!message) {
@@ -137,20 +155,56 @@ module.exports = {
                     );
                     await interaction.reply({ content: `Paramètre mis à jour : ${column.replace('_', ' ')} défini à ${xpValue} XP.`, ephemeral: true });
                 }
+            } else if (subcommand.startsWith('clear-')) {
+                if (!isAdmin) {
+                    return interaction.reply({ content: 'Permission refusée. Seuls les administrateurs peuvent effacer ces paramètres.', ephemeral: true });
+                }
+
+                if (subcommand === 'clear-channel') {
+                    await pool.query(
+                        'INSERT INTO xp_settings (guild_id, level_up_channel) VALUES ($1, NULL) ON CONFLICT (guild_id) DO UPDATE SET level_up_channel = NULL',
+                        [guildId]
+                    );
+                    await interaction.reply({ content: 'Le salon des annonces de niveau a été effacé.', ephemeral: true });
+                } else if (subcommand === 'clear-excluded-roles') {
+                    await pool.query(
+                        'INSERT INTO xp_settings (guild_id, excluded_roles) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET excluded_roles = $2',
+                        [guildId, '[]']
+                    );
+                    await interaction.reply({ content: 'La liste des rôles exclus a été effacée.', ephemeral: true });
+                } else if (subcommand === 'clear-no-camera') {
+                    await pool.query(
+                        'INSERT INTO xp_settings (guild_id, no_camera_channels) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET no_camera_channels = $2',
+                        [guildId, '[]']
+                    );
+                    await interaction.reply({ content: 'La liste des salons sans caméra a été effacée.', ephemeral: true });
+                } else if (subcommand === 'clear-level-message') {
+                    const level = interaction.options.getInteger('level');
+                    await pool.query(
+                        'DELETE FROM level_up_messages WHERE guild_id = $1 AND level = $2',
+                        [guildId, level]
+                    );
+                    await interaction.reply({ content: `Le message personnalisé pour le niveau ${level} a été effacé.`, ephemeral: true });
+                } else if (subcommand === 'clear-default-message') {
+                    await pool.query(
+                        'INSERT INTO xp_settings (guild_id, default_level_message) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET default_level_message = $2',
+                        [guildId, 'Félicitations {user}, tu es désormais niveau {level} ! Continue d’explorer tes désirs intimes sur le Donjon. 😈']
+                    );
+                    await interaction.reply({ content: 'Le message par défaut a été réinitialisé à sa valeur initiale.', ephemeral: true });
+                }
             } else if (subcommand === 'view') {
                 const xpSettingsResult = await pool.query('SELECT * FROM xp_settings WHERE guild_id = $1', [guildId]);
                 const xpSettings = xpSettingsResult.rows[0] || {
-                    message_xp: 50,
-                    voice_xp_per_min: 100,
-                    reaction_xp: 25,
-                    image_xp: 75,
+                    message_xp: 10,
+                    voice_xp_per_min: 5,
+                    reaction_xp: 2,
+                    image_xp: 15,
                     level_up_channel: null,
                     excluded_roles: '[]',
                     no_camera_channels: '[]',
                     default_level_message: 'Félicitations {user}, tu es désormais niveau {level} ! Continue d’explorer tes désirs intimes sur le Donjon. 😈'
                 };
 
-                // Gestion des valeurs potentiellement undefined ou NULL
                 const excludedRoles = JSON.parse(xpSettings.excluded_roles || '[]');
                 const noCameraChannels = JSON.parse(xpSettings.no_camera_channels || '[]');
 
