@@ -12,6 +12,9 @@ const path = require('path');
 const express = require('express');
 const fs = require('fs').promises;
 
+// Importe la connexion à la base de données
+const pool = require('./db');
+
 // Initialise le serveur Express pour le monitoring et health checks
 const app = express();
 
@@ -83,7 +86,7 @@ async function deployCommands() {
     }
 }
 
-// Initialise warns.json s’il n’existe pas
+// Initialise warns.json s’il n’existe pas (optionnel si tu passes à la DB)
 async function initializeWarnsFile() {
     const warnFile = path.join(__dirname, 'warns.json');
     try {
@@ -92,6 +95,25 @@ async function initializeWarnsFile() {
     } catch (error) {
         await fs.writeFile(warnFile, '{}', 'utf8');
         console.log('Fichier warns.json créé avec succès.');
+    }
+}
+
+// Initialise la base de données PostgreSQL
+async function initDatabase() {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS warns (
+                id SERIAL PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                guild_id TEXT NOT NULL,
+                reason TEXT,
+                moderator_id TEXT NOT NULL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        console.log('Table warns prête.');
+    } catch (error) {
+        console.error('Erreur lors de l’initialisation de la base de données :', error.stack);
     }
 }
 
@@ -151,7 +173,8 @@ require('./handlers/messageHandler')(client);
 // Démarre le bot de manière asynchrone
 async function startBot() {
     try {
-        await initializeWarnsFile();
+        await initializeWarnsFile(); // Garde ça si tu veux encore utiliser warns.json en parallèle
+        await initDatabase(); // Initialise la base de données
         await loadCommands();
         await deployCommands();
         await client.login(process.env.TOKEN);
