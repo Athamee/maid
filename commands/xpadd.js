@@ -2,10 +2,13 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 const { PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const pool = require('../db');
 
+// Formule pour XP requis au niveau suivant : 1000 + (level-1)^2 * 400
+const getRequiredXp = (level) => 1000 + Math.pow(level - 1, 2) * 400;
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('xpadd')
-        .setDescription('Ajouter de l’XP ou des niveaux à un membre (modo only)')
+        .setDescription('Ajouter de l’XP ou des niveaux à un membre (admin & animateur)')
         .addUserOption(option => 
             option.setName('target')
                 .setDescription('Membre à modifier')
@@ -23,10 +26,12 @@ module.exports = {
 
     async execute(interaction) {
         const modoRoleId = process.env.MODO;
+        const animatorRoleId = process.env.ANIMATOR;
         const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
         const hasModoRole = modoRoleId && interaction.member.roles.cache.has(modoRoleId);
+        const hasAnimatorRole = animatorRoleId && interaction.member.roles.cache.has(animatorRoleId);
 
-        if (!isAdmin && !hasModoRole) {
+        if (!isAdmin && !hasModoRole && !hasAnimatorRole) {
             return interaction.reply({ content: 'Permission refusée.', ephemeral: true });
         }
 
@@ -49,8 +54,22 @@ module.exports = {
                 [userId, guildId, xpToAdd, levelsToAdd]
             );
 
-            const newXp = rows[0].xp;
-            const newLevel = rows[0].level;
+            let newXp = rows[0].xp;
+            let newLevel = rows[0].level;
+
+            // Recalculer le niveau basé sur l’XP total
+            let recalculatedLevel = 1;
+            while (newXp >= getRequiredXp(recalculatedLevel + 1)) {
+                recalculatedLevel++;
+            }
+
+            if (recalculatedLevel !== newLevel) {
+                newLevel = recalculatedLevel;
+                await pool.query(
+                    'UPDATE xp SET level = $1 WHERE user_id = $2 AND guild_id = $3',
+                    [newLevel, userId, guildId]
+                );
+            }
 
             const embed = new EmbedBuilder()
                 .setTitle(`XP/Niveaux ajoutés pour ${target.tag}`)

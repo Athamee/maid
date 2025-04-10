@@ -2,10 +2,13 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 const { PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const pool = require('../db');
 
+// Formule pour XP requis au niveau suivant : 1000 + (level-1)^2 * 400
+const getRequiredXp = (level) => 1000 + Math.pow(level - 1, 2) * 400;
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('xpremove')
-        .setDescription('Retirer de l’XP ou des niveaux à un membre (modo only)')
+        .setDescription('Retirer de l’XP ou des niveaux à un membre (admin & modo)')
         .addUserOption(option => 
             option.setName('target')
                 .setDescription('Membre à modifier')
@@ -50,8 +53,22 @@ module.exports = {
                 [userId, guildId, xpToRemove, levelsToRemove]
             );
 
-            const newXp = rows[0].xp;
-            const newLevel = rows[0].level;
+            let newXp = rows[0].xp;
+            let newLevel = rows[0].level;
+
+            // Recalculer le niveau basé sur l’XP total
+            let recalculatedLevel = 1;
+            while (newXp >= getRequiredXp(recalculatedLevel + 1)) {
+                recalculatedLevel++;
+            }
+
+            if (recalculatedLevel !== newLevel) {
+                newLevel = recalculatedLevel;
+                await pool.query(
+                    'UPDATE xp SET level = $1 WHERE user_id = $2 AND guild_id = $3',
+                    [newLevel, userId, guildId]
+                );
+            }
 
             const embed = new EmbedBuilder()
                 .setTitle(`XP/Niveaux retirés pour ${target.tag}`)

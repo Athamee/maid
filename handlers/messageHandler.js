@@ -3,16 +3,44 @@ const pool = require('../db');
 // Stocke les timers pour l’XP vocal par utilisateur et serveur
 const voiceTimers = new Map();
 
+// Formule pour XP requis au niveau suivant : 1000 + (level-1)^2 * 400
+const getRequiredXp = (level) => 1000 + Math.pow(level - 1, 2) * 400;
+
+// Liste des mots-clés et leurs réactions
+const reactionTriggers = {
+    'bonjour': '🌞',
+    'nuit': '🌠'
+    'salut': '😊',
+    'hello': '🙃',
+    'merci': '🙏',
+    'bravo': '👏',
+    'lol': '😂',
+    'cool': '😎'
+    // Ajoute d’autres mots-clés et emojis ici selon tes besoins
+};
+
 module.exports = (client) => {
-    // XP pour les messages écrits et images
+    // XP et réactions pour les messages écrits et images
     client.on('messageCreate', async message => {
         if (message.author.bot || !message.guild) return;
 
         const userId = message.author.id;
         const guildId = message.guild.id;
+        const content = message.content.toLowerCase(); // Insensible à la casse
 
+        // Gestion des réactions aux mots-clés
+        for (const [trigger, emoji] of Object.entries(reactionTriggers)) {
+            if (content.includes(trigger)) {
+                try {
+                    await message.react(emoji);
+                } catch (error) {
+                    console.error(`Erreur lors de l’ajout de la réaction ${emoji} :`, error.stack);
+                }
+            }
+        }
+
+        // Gestion des XP
         try {
-            // Récupère les paramètres d’XP pour ce serveur
             const settingsResult = await pool.query(
                 'SELECT * FROM xp_settings WHERE guild_id = $1',
                 [guildId]
@@ -22,7 +50,6 @@ module.exports = (client) => {
                 image_xp: 15
             };
 
-            // Vérifie le cooldown (1 min)
             const lastMessageResult = await pool.query(
                 'SELECT last_message FROM xp WHERE user_id = $1 AND guild_id = $2',
                 [userId, guildId]
@@ -30,11 +57,9 @@ module.exports = (client) => {
             const lastMessage = lastMessageResult.rows[0]?.last_message;
             if (lastMessage && (Date.now() - new Date(lastMessage).getTime()) < 60000) return;
 
-            // Calcule l’XP à ajouter
             let xpToAdd = settings.message_xp;
-            if (message.attachments.size > 0) xpToAdd += settings.image_xp; // Bonus pour les images
+            if (message.attachments.size > 0) xpToAdd += settings.image_xp;
 
-            // Met à jour l’XP
             const { rows } = await pool.query(
                 'INSERT INTO xp (user_id, guild_id, xp, last_message) VALUES ($1, $2, $3, NOW()) ' +
                 'ON CONFLICT (user_id, guild_id) DO UPDATE SET xp = xp.xp + $3, last_message = NOW() ' +
@@ -42,12 +67,14 @@ module.exports = (client) => {
                 [userId, guildId, xpToAdd]
             );
 
-            const newXp = rows[0].xp;
+            let newXp = rows[0].xp;
             let newLevel = rows[0].level;
-            const requiredXp = newLevel * 100;
 
-            if (newXp >= requiredXp) {
+            while (newXp >= getRequiredXp(newLevel + 1)) {
                 newLevel++;
+            }
+
+            if (newLevel !== rows[0].level) {
                 await pool.query(
                     'UPDATE xp SET level = $1 WHERE user_id = $2 AND guild_id = $3',
                     [newLevel, userId, guildId]
@@ -80,12 +107,14 @@ module.exports = (client) => {
                 [userId, guildId, settings.reaction_xp]
             );
 
-            const newXp = rows[0].xp;
+            let newXp = rows[0].xp;
             let newLevel = rows[0].level;
-            const requiredXp = newLevel * 100;
 
-            if (newXp >= requiredXp) {
+            while (newXp >= getRequiredXp(newLevel + 1)) {
                 newLevel++;
+            }
+
+            if (newLevel !== rows[0].level) {
                 await pool.query(
                     'UPDATE xp SET level = $1 WHERE user_id = $2 AND guild_id = $3',
                     [newLevel, userId, guildId]
@@ -106,7 +135,6 @@ module.exports = (client) => {
 
         const key = `${userId}-${guildId}`;
 
-        // Si l’utilisateur rejoint un canal vocal
         if (!oldState.channel && newState.channel) {
             const timer = setInterval(async () => {
                 try {
@@ -123,12 +151,14 @@ module.exports = (client) => {
                         [userId, guildId, settings.voice_xp_per_min]
                     );
 
-                    const newXp = rows[0].xp;
+                    let newXp = rows[0].xp;
                     let newLevel = rows[0].level;
-                    const requiredXp = newLevel * 100;
 
-                    if (newXp >= requiredXp) {
+                    while (newXp >= getRequiredXp(newLevel + 1)) {
                         newLevel++;
+                    }
+
+                    if (newLevel !== rows[0].level) {
                         await pool.query(
                             'UPDATE xp SET level = $1 WHERE user_id = $2 AND guild_id = $3',
                             [newLevel, userId, guildId]
@@ -141,11 +171,10 @@ module.exports = (client) => {
                 } catch (error) {
                     console.error('Erreur lors de l’ajout d’XP vocal :', error.stack);
                 }
-            }, 60000); // Toutes les minutes
+            }, 60000);
             voiceTimers.set(key, timer);
         }
 
-        // Si l’utilisateur quitte le vocal
         if (oldState.channel && !newState.channel) {
             const timer = voiceTimers.get(key);
             if (timer) {

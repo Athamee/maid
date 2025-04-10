@@ -5,11 +5,11 @@ const pool = require('../db');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('xpsettings')
-        .setDescription('Régler les gains d’XP (modo only)')
+        .setDescription('Régler ou voir les gains d’XP')
         .addSubcommand(subcommand =>
             subcommand
                 .setName('set-message')
-                .setDescription('Définir l’XP par message')
+                .setDescription('Définir l’XP par message (modo only)')
                 .addIntegerOption(option => 
                     option.setName('xp')
                         .setDescription('Valeur d’XP par message')
@@ -19,7 +19,7 @@ module.exports = {
         .addSubcommand(subcommand =>
             subcommand
                 .setName('set-voice')
-                .setDescription('Définir l’XP par minute en vocal')
+                .setDescription('Définir l’XP par minute en vocal (modo only)')
                 .addIntegerOption(option => 
                     option.setName('xp')
                         .setDescription('Valeur d’XP par minute en vocal')
@@ -29,7 +29,7 @@ module.exports = {
         .addSubcommand(subcommand =>
             subcommand
                 .setName('set-reaction')
-                .setDescription('Définir l’XP par réaction')
+                .setDescription('Définir l’XP par réaction (modo only)')
                 .addIntegerOption(option => 
                     option.setName('xp')
                         .setDescription('Valeur d’XP par réaction')
@@ -39,7 +39,7 @@ module.exports = {
         .addSubcommand(subcommand =>
             subcommand
                 .setName('set-image')
-                .setDescription('Définir l’XP par image')
+                .setDescription('Définir l’XP par image (modo only)')
                 .addIntegerOption(option => 
                     option.setName('xp')
                         .setDescription('Valeur d’XP par image')
@@ -49,23 +49,23 @@ module.exports = {
         .addSubcommand(subcommand =>
             subcommand
                 .setName('view')
-                .setDescription('Voir les paramètres actuels')
+                .setDescription('Voir les paramètres actuels d’XP (visible par tous)')
         ),
 
     async execute(interaction) {
         const modoRoleId = process.env.MODO;
         const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
         const hasModoRole = modoRoleId && interaction.member.roles.cache.has(modoRoleId);
-
-        if (!isAdmin && !hasModoRole) {
-            return interaction.reply({ content: 'Permission refusée.', ephemeral: true });
-        }
-
         const guildId = interaction.guild.id;
         const subcommand = interaction.options.getSubcommand();
 
         try {
             if (subcommand.startsWith('set-')) {
+                // Vérification des permissions pour les sous-commandes set-*
+                if (!isAdmin && !hasModoRole) {
+                    return interaction.reply({ content: 'Permission refusée.', ephemeral: true });
+                }
+
                 const xpValue = interaction.options.getInteger('xp');
                 let column;
 
@@ -95,6 +95,7 @@ module.exports = {
                     ephemeral: true 
                 });
             } else if (subcommand === 'view') {
+                // Pas de restriction pour view, visible par tous
                 const result = await pool.query(
                     'SELECT * FROM xp_settings WHERE guild_id = $1',
                     [guildId]
@@ -116,7 +117,8 @@ module.exports = {
                         { name: 'XP par image', value: `${settings.image_xp}`, inline: true }
                     );
 
-                await interaction.reply({ embeds: [embed], ephemeral: true });
+                // Réponse publique (non-éphemère)
+                await interaction.reply({ embeds: [embed], ephemeral: false });
             }
         } catch (error) {
             console.error(`Erreur xpsettings (${subcommand}) :`, error.stack);
