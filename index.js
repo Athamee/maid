@@ -69,7 +69,6 @@ async function deployCommands() {
 
 async function initDatabase() {
     try {
-        // Crée les tables si elles n’existent pas
         await pool.query(`
             CREATE TABLE IF NOT EXISTS warns (
                 id SERIAL PRIMARY KEY,
@@ -99,7 +98,8 @@ async function initDatabase() {
                 image_xp INTEGER DEFAULT 15,
                 level_up_channel TEXT DEFAULT NULL,
                 excluded_roles TEXT DEFAULT '[]',
-                no_camera_channels TEXT DEFAULT '[]'
+                no_camera_channels TEXT DEFAULT '[]',
+                default_level_message TEXT DEFAULT '🎉 Niveau {level}, {user} ! Continue comme ça !'
             )
         `);
         await pool.query(`
@@ -119,29 +119,7 @@ async function initDatabase() {
                 PRIMARY KEY (guild_id, voice_channel_id)
             )
         `);
-
-        // Migration : Ajoute ou corrige la colonne default_level_message
-        await pool.query(`
-            DO $$
-            BEGIN
-                IF NOT EXISTS (
-                    SELECT 1 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'xp_settings' 
-                    AND column_name = 'default_level_message'
-                ) THEN
-                    ALTER TABLE xp_settings 
-                    ADD COLUMN default_level_message TEXT DEFAULT '🎉 Niveau {level}, {user} ! Continue comme ça !';
-                ELSE
-                    -- Met à jour la valeur par défaut si la colonne existe déjà mais n’a pas la bonne valeur
-                    ALTER TABLE xp_settings 
-                    ALTER COLUMN default_level_message SET DEFAULT '🎉 Niveau {level}, {user} ! Continue comme ça !';
-                END IF;
-            END;
-            $$;
-        `);
-
-        console.log('Tables warns, xp, xp_settings, level_up_messages et voice_role_settings prêtes.');
+        console.log('Tables warns, xp, xp_settings, level_up_messages et voice_role_settings vérifiées/créées.');
     } catch (error) {
         console.error('Erreur lors de l’initialisation de la base de données :', error.stack);
         throw error;
@@ -149,6 +127,39 @@ async function initDatabase() {
 }
 
 client.once('ready', () => console.log('Maid babe est en ligne !'));
+
+// Événement : un nouveau membre rejoint le serveur
+client.on('guildMemberAdd', async member => {
+    const userId = member.id;
+    const guildId = member.guild.id;
+
+    try {
+        // Ajoute le membre à la table xp avec des valeurs par défaut
+        await pool.query(
+            'INSERT INTO xp (user_id, guild_id, xp, level, last_message) VALUES ($1, $2, 0, 1, NOW()) ' +
+            'ON CONFLICT (user_id, guild_id) DO NOTHING',
+            [userId, guildId]
+        );
+        console.log(`Membre ${userId} ajouté à la BD pour le serveur ${guildId}`);
+    } catch (error) {
+        console.error(`Erreur lors de l’ajout du membre ${userId} à la BD :`, error.stack);
+    }
+});
+
+// Événement : un membre quitte le serveur
+client.on('guildMemberRemove', async member => {
+    const userId = member.id;
+    const guildId = member.guild.id;
+
+    try {
+        // Supprime les données du membre dans les tables xp et warns
+        await pool.query('DELETE FROM xp WHERE user_id = $1 AND guild_id = $2', [userId, guildId]);
+        await pool.query('DELETE FROM warns WHERE user_id = $1 AND guild_id = $2', [userId, guildId]);
+        console.log(`Membre ${userId} supprimé de la BD pour le serveur ${guildId}`);
+    } catch (error) {
+        console.error(`Erreur lors de la suppression du membre ${userId} de la BD :`, error.stack);
+    }
+});
 
 client.on('interactionCreate', async interaction => {
     if (interaction.isCommand()) {
