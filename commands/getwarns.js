@@ -1,54 +1,47 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
-const fs = require('fs').promises;
-const path = require('path');
-
-// Chemin vers le fichier JSON
-const warnFile = path.join(__dirname, '../warns.json');
-
-// Fonction pour lire les warns
-async function getWarns() {
-    try {
-        const data = await fs.readFile(warnFile, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        return {}; // Retourne un objet vide si le fichier n'existe pas
-    }
-}
+const { SlashCommandBuilder } = require('@discordjs/builders');
+const { PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const pool = require('../db');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('getwarns')
-        .setDescription('Récupère une copie du fichier warns.json.')
-        .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers), // Réservé aux modérateurs
+        .setDescription('Voir les warns d’un membre (modo only)')
+        .addUserOption(option => option.setName('target').setDescription('Membre à vérifier').setRequired(true)),
+
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true }); // Réponse éphémère pour confidentialité
+        const modoRoleId = process.env.MODO;
+        const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+        const hasModoRole = modoRoleId && interaction.member.roles.cache.has(modoRoleId);
 
-        // Lit le contenu du fichier warns.json
-        const warns = await getWarns();
-
-        // Si le fichier est vide
-        if (Object.keys(warns).length === 0) {
-            return interaction.editReply({ content: 'Le fichier warns.json est vide pour le moment.' });
+        if (!isAdmin && !hasModoRole) {
+            return interaction.reply({ content: 'Permission refusée.', ephemeral: true });
         }
 
-        // Convertit l’objet en texte JSON lisible
-        const warnText = JSON.stringify(warns, null, 2);
+        const target = interaction.options.getUser('target');
 
-        // Option 1 : Envoie le contenu directement si court
-        if (warnText.length < 2000) { // Limite Discord pour un message
-            return interaction.editReply({ content: 'Voici le contenu actuel de warns.json :\n```json\n' + warnText + '\n```' });
+        try {
+            const result = await pool.query(
+                'SELECT * FROM warns WHERE user_id = $1 AND guild_id = $2 ORDER BY timestamp DESC',
+                [target.id, interaction.guild.id]
+            );
+            const warns = result.rows;
+
+            if (warns.length === 0) {
+                return interaction.reply({ content: `${target.tag} n’a aucun warn.`, ephemeral: true });
+            }
+
+            const embed = new EmbedBuilder()
+                .setTitle(`Warns de ${target.tag}`)
+                .setColor('#FFAA00')
+                .setDescription(warns.map(w => 
+                    `ID: ${w.id} | Raison: ${w.reason} | Par: <@${w.moderator_id}> | Date: ${w.timestamp.toLocaleString()}`
+                ).join('\n'))
+                .setFooter({ text: `Total : ${warns.length} warns` });
+
+            await interaction.reply({ embeds: [embed], ephemeral: true });
+        } catch (error) {
+            console.error('Erreur getwarns :', error.stack);
+            await interaction.reply({ content: 'Erreur lors de la récupération des warns.', ephemeral: true });
         }
-
-        // Option 2 : Envoie en pièce jointe si trop long
-        const buffer = Buffer.from(warnText, 'utf8');
-        const attachment = {
-            attachment: buffer,
-            name: 'warns.json',
-        };
-
-        await interaction.editReply({
-            content: 'Le fichier warns.json est trop long pour être affiché ici. Voici une copie en pièce jointe :',
-            files: [attachment],
-        });
-    },
+    }
 };

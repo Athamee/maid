@@ -10,7 +10,6 @@ const { REST } = require('@discordjs/rest');
 // Importe les modules Node.js pour gérer les fichiers et le serveur Express
 const path = require('path');
 const express = require('express');
-const fs = require('fs').promises;
 
 // Importe la connexion à la base de données
 const pool = require('./db');
@@ -37,7 +36,8 @@ const client = new Client({
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildModeration
+        GatewayIntentBits.GuildModeration,
+        GatewayIntentBits.GuildVoiceStates // Ajouté pour l’XP vocal
     ]
 });
 
@@ -86,21 +86,10 @@ async function deployCommands() {
     }
 }
 
-// Initialise warns.json s’il n’existe pas (optionnel si tu passes à la DB)
-async function initializeWarnsFile() {
-    const warnFile = path.join(__dirname, 'warns.json');
-    try {
-        await fs.access(warnFile);
-        console.log('Fichier warns.json trouvé.');
-    } catch (error) {
-        await fs.writeFile(warnFile, '{}', 'utf8');
-        console.log('Fichier warns.json créé avec succès.');
-    }
-}
-
-// Initialise la base de données PostgreSQL
+// Initialise la base de données PostgreSQL avec les tables warns, xp et xp_settings
 async function initDatabase() {
     try {
+        // Table warns
         await pool.query(`
             CREATE TABLE IF NOT EXISTS warns (
                 id SERIAL PRIMARY KEY,
@@ -111,7 +100,28 @@ async function initDatabase() {
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        console.log('Table warns prête.');
+        // Table xp
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS xp (
+                user_id TEXT NOT NULL,
+                guild_id TEXT NOT NULL,
+                xp INTEGER DEFAULT 0,
+                level INTEGER DEFAULT 1,
+                last_message TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, guild_id)
+            )
+        `);
+        // Table xp_settings
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS xp_settings (
+                guild_id TEXT PRIMARY KEY,
+                message_xp INTEGER DEFAULT 10,
+                voice_xp_per_min INTEGER DEFAULT 5,
+                reaction_xp INTEGER DEFAULT 2,
+                image_xp INTEGER DEFAULT 15
+            )
+        `);
+        console.log('Tables warns, xp et xp_settings prêtes.');
     } catch (error) {
         console.error('Erreur lors de l’initialisation de la base de données :', error.stack);
     }
@@ -124,7 +134,6 @@ client.once('ready', () => {
 
 // Gère toutes les interactions (commandes Slash et boutons)
 client.on('interactionCreate', async interaction => {
-    // Gestion des commandes Slash
     if (interaction.isCommand()) {
         const command = client.commands.get(interaction.commandName);
         if (!command) {
@@ -145,7 +154,6 @@ client.on('interactionCreate', async interaction => {
         }
     }
 
-    // Gestion des interactions de boutons
     if (interaction.isButton()) {
         const command = client.commands.get('ticket');
         if (command) {
@@ -173,7 +181,6 @@ require('./handlers/messageHandler')(client);
 // Démarre le bot de manière asynchrone
 async function startBot() {
     try {
-        await initializeWarnsFile(); // Garde ça si tu veux encore utiliser warns.json en parallèle
         await initDatabase(); // Initialise la base de données
         await loadCommands();
         await deployCommands();
