@@ -9,7 +9,7 @@ const getRequiredXp = (level) => 1000 + Math.pow(level - 1, 2) * 400;
 // Liste des mots-clés et leurs réactions
 const reactionTriggers = {
     'bonjour': '🌞',
-    'nuit': '🌠'
+    'nuit': '🌠',
     'salut': '😊',
     'hello': '🙃',
     'merci': '🙏',
