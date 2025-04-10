@@ -6,7 +6,7 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('xpsettings')
         .setDescription('Régler ou voir les gains d’XP (admins uniquement)')
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator) // Restreint aux admins uniquement
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addSubcommand(subcommand =>
             subcommand.setName('set-message').setDescription('Définir l’XP par message')
                 .addIntegerOption(option => option.setName('xp').setDescription('Valeur d’XP par message').setRequired(true).setMinValue(0))
@@ -59,7 +59,6 @@ module.exports = {
         const subcommand = interaction.options.getSubcommand();
 
         try {
-            // Vérification uniquement pour les admins (modoRoleId n’est plus utilisé ici)
             if (subcommand.startsWith('set-') || subcommand === 'exclude-roles') {
                 if (!isAdmin) {
                     return interaction.reply({ content: 'Permission refusée. Seuls les administrateurs peuvent modifier ces paramètres.', ephemeral: true });
@@ -80,20 +79,6 @@ module.exports = {
                         [guildId, level, message]
                     );
                     await interaction.reply({ content: `Message pour le niveau ${level} défini : "${message}"`, ephemeral: true });
-                } else if (subcommand === 'exclude-roles') {
-                    const roles = interaction.options.getString('roles').split(',').map(id => id.trim());
-                    await pool.query(
-                        'INSERT INTO xp_settings (guild_id, excluded_roles) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET excluded_roles = $2',
-                        [guildId, JSON.stringify(roles)]
-                    );
-                    await interaction.reply({ content: `Rôles exclus des XP : ${roles.map(id => `<@&${id}>`).join(', ')}`, ephemeral: true });
-                } else if (subcommand === 'set-no-camera') {
-                    const channels = interaction.options.getString('channels').split(',').map(id => id.trim());
-                    await pool.query(
-                        'INSERT INTO xp_settings (guild_id, no_camera_channels) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET no_camera_channels = $2',
-                        [guildId, JSON.stringify(channels)]
-                    );
-                    await interaction.reply({ content: `Caméra interdite dans : ${channels.map(id => `<#${id}>`).join(', ')}`, ephemeral: true });
                 } else if (subcommand === 'set-voice-role') {
                     const voiceChannel = interaction.options.getChannel('voice_channel');
                     const role = interaction.options.getRole('role');
@@ -111,6 +96,20 @@ module.exports = {
                         [guildId, voiceChannel.id, role.id, textChannel.id]
                     );
                     await interaction.reply({ content: `Rôle ${role} et canal ${textChannel} liés à ${voiceChannel}.`, ephemeral: true });
+                } else if (subcommand === 'exclude-roles') {
+                    const roles = interaction.options.getString('roles').split(',').map(id => id.trim());
+                    await pool.query(
+                        'INSERT INTO xp_settings (guild_id, excluded_roles) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET excluded_roles = $2',
+                        [guildId, JSON.stringify(roles)]
+                    );
+                    await interaction.reply({ content: `Rôles exclus des XP : ${roles.map(id => `<@&${id}>`).join(', ')}`, ephemeral: true });
+                } else if (subcommand === 'set-no-camera') {
+                    const channels = interaction.options.getString('channels').split(',').map(id => id.trim());
+                    await pool.query(
+                        'INSERT INTO xp_settings (guild_id, no_camera_channels) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET no_camera_channels = $2',
+                        [guildId, JSON.stringify(channels)]
+                    );
+                    await interaction.reply({ content: `Caméra interdite dans : ${channels.map(id => `<#${id}>`).join(', ')}`, ephemeral: true });
                 } else if (subcommand === 'set-default-message') {
                     const message = interaction.options.getString('message');
                     if (!message) {
@@ -139,20 +138,21 @@ module.exports = {
                     await interaction.reply({ content: `Paramètre mis à jour : ${column.replace('_', ' ')} défini à ${xpValue} XP.`, ephemeral: true });
                 }
             } else if (subcommand === 'view') {
-                // La sous-commande 'view' est accessible aux admins uniquement ici
                 const xpSettingsResult = await pool.query('SELECT * FROM xp_settings WHERE guild_id = $1', [guildId]);
                 const xpSettings = xpSettingsResult.rows[0] || {
-                    message_xp: 10,
-                    voice_xp_per_min: 5,
-                    reaction_xp: 2,
-                    image_xp: 15,
+                    message_xp: 50,
+                    voice_xp_per_min: 100,
+                    reaction_xp: 25,
+                    image_xp: 75,
                     level_up_channel: null,
                     excluded_roles: '[]',
                     no_camera_channels: '[]',
-                    default_level_message: '🎉 Niveau {level}, {user} ! Continue comme ça !'
+                    default_level_message: 'Félicitations {user}, tu es désormais niveau {level} ! Continue d’explorer tes désirs intimes sur le Donjon. 😈'
                 };
-                const excludedRoles = JSON.parse(xpSettings.excluded_roles);
-                const noCameraChannels = JSON.parse(xpSettings.no_camera_channels);
+
+                // Gestion des valeurs potentiellement undefined ou NULL
+                const excludedRoles = JSON.parse(xpSettings.excluded_roles || '[]');
+                const noCameraChannels = JSON.parse(xpSettings.no_camera_channels || '[]');
 
                 const voiceRoleResult = await pool.query('SELECT * FROM voice_role_settings WHERE guild_id = $1', [guildId]);
                 const voiceRoleSettings = voiceRoleResult.rows;
