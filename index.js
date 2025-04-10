@@ -3,33 +3,20 @@ if (!process.env.RENDER) {
     require('dotenv').config();
 }
 
-// Importe les modules Discord.js pour le bot et les commandes
 const { Client, GatewayIntentBits, Collection, Routes } = require('discord.js');
 const { REST } = require('@discordjs/rest');
-
-// Importe les modules Node.js pour gérer les fichiers et le serveur Express
 const path = require('path');
 const express = require('express');
-
-// Importe la connexion à la base de données
 const pool = require('./db');
 
-// Initialise le serveur Express pour le monitoring et health checks
 const app = express();
 
-// Endpoint Health Check pour Render
-app.get('/health', (req, res) => {
-    res.status(200).send('Maid babe est en bonne santé !');
-});
-
-// Endpoint racine pour vérifier manuellement que le bot est en vie
+app.get('/health', (req, res) => res.status(200).send('Maid babe est en bonne santé !'));
 app.get('/', (req, res) => res.send('Ta servante dévouée, Maid babe, est vivante !'));
 
-// Définit le port (fourni par Render ou 8000 par défaut)
 const port = process.env.PORT || 8000;
 app.listen(port, () => console.log(`Serveur Express démarré sur le port ${port}`));
 
-// Crée le client Discord avec tous les intents nécessaires
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -37,14 +24,12 @@ const client = new Client({
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildModeration,
-        GatewayIntentBits.GuildVoiceStates // Ajouté pour l’XP vocal
+        GatewayIntentBits.GuildVoiceStates
     ]
 });
 
-// Crée une collection pour stocker les commandes
 client.commands = new Collection();
 
-// Charge dynamiquement les commandes de manière asynchrone
 async function loadCommands() {
     const commandsPath = path.join(__dirname, 'commands');
     const commandFiles = require('fs').readdirSync(commandsPath).filter(file => file.endsWith('.js'));
@@ -65,7 +50,6 @@ async function loadCommands() {
     }
 }
 
-// Déploie les commandes Slash sur Discord
 async function deployCommands() {
     const commands = [];
     for (const [name, command] of client.commands) {
@@ -76,20 +60,15 @@ async function deployCommands() {
 
     try {
         console.log('Déploiement des commandes Slash...');
-        await rest.put(
-            Routes.applicationCommands(process.env.ID_APP),
-            { body: commands }
-        );
+        await rest.put(Routes.applicationCommands(process.env.ID_APP), { body: commands });
         console.log('Commandes déployées avec succès !');
     } catch (error) {
         console.error('Erreur lors du déploiement des commandes :', error.message, error.stack);
     }
 }
 
-// Initialise la base de données PostgreSQL avec les tables warns, xp et xp_settings
 async function initDatabase() {
     try {
-        // Table warns
         await pool.query(`
             CREATE TABLE IF NOT EXISTS warns (
                 id SERIAL PRIMARY KEY,
@@ -100,7 +79,6 @@ async function initDatabase() {
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        // Table xp
         await pool.query(`
             CREATE TABLE IF NOT EXISTS xp (
                 user_id TEXT NOT NULL,
@@ -111,28 +89,44 @@ async function initDatabase() {
                 PRIMARY KEY (user_id, guild_id)
             )
         `);
-        // Table xp_settings
         await pool.query(`
             CREATE TABLE IF NOT EXISTS xp_settings (
                 guild_id TEXT PRIMARY KEY,
                 message_xp INTEGER DEFAULT 10,
                 voice_xp_per_min INTEGER DEFAULT 5,
                 reaction_xp INTEGER DEFAULT 2,
-                image_xp INTEGER DEFAULT 15
+                image_xp INTEGER DEFAULT 15,
+                level_up_channel TEXT DEFAULT NULL,
+                excluded_roles TEXT DEFAULT '[]',
+                no_camera_channels TEXT DEFAULT '[]',
+                default_level_message TEXT DEFAULT 'Bravo à toi {user}, tu as atteins le niveau ${level} ! Continue d'explorer tes désirs intimes dans le Donjon. 😈' -- Nouveau champ pour message par défaut
             )
         `);
-        console.log('Tables warns, xp et xp_settings prêtes.');
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS level_up_messages (
+                guild_id TEXT NOT NULL,
+                level INTEGER NOT NULL,
+                message TEXT NOT NULL,
+                PRIMARY KEY (guild_id, level)
+            )
+        `);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS voice_role_settings (
+                guild_id TEXT NOT NULL,
+                voice_channel_id TEXT NOT NULL,
+                role_id TEXT NOT NULL,
+                text_channel_id TEXT NOT NULL,
+                PRIMARY KEY (guild_id, voice_channel_id)
+            )
+        `);
+        console.log('Tables warns, xp, xp_settings, level_up_messages et voice_role_settings prêtes.');
     } catch (error) {
         console.error('Erreur lors de l’initialisation de la base de données :', error.stack);
     }
 }
 
-// Événement déclenché quand le bot est prêt
-client.once('ready', () => {
-    console.log('Maid babe est en ligne !');
-});
+client.once('ready', () => console.log('Maid babe est en ligne !'));
 
-// Gère toutes les interactions (commandes Slash et boutons)
 client.on('interactionCreate', async interaction => {
     if (interaction.isCommand()) {
         const command = client.commands.get(interaction.commandName);
@@ -140,7 +134,6 @@ client.on('interactionCreate', async interaction => {
             console.warn(`Commande inconnue : ${interaction.commandName}`);
             return;
         }
-
         try {
             console.log(`Commande exécutée : ${interaction.commandName} par ${interaction.user.tag}`);
             await command.execute(interaction);
@@ -175,13 +168,11 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-// Charge le gestionnaire de messages
 require('./handlers/messageHandler')(client);
 
-// Démarre le bot de manière asynchrone
 async function startBot() {
     try {
-        await initDatabase(); // Initialise la base de données
+        await initDatabase();
         await loadCommands();
         await deployCommands();
         await client.login(process.env.TOKEN);
