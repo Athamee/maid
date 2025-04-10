@@ -18,7 +18,6 @@ const reactionTriggers = {
 };
 
 const levelUpImages = {
-    1: path.join(__dirname, '../img/level1.png'),
     5: path.join(__dirname, '../img/level5.png'),
     10: path.join(__dirname, '../img/level10.png'),
     20: path.join(__dirname, '../img/level20.png')
@@ -33,7 +32,6 @@ const getLevelUpImage = (level) => {
     return defaultImage;
 };
 
-// Récupère le message personnalisé ou le message par défaut depuis xp_settings
 const getLevelUpMessage = async (guildId, level) => {
     const customMessageResult = await pool.query(
         'SELECT message FROM level_up_messages WHERE guild_id = $1 AND level = $2',
@@ -47,8 +45,8 @@ const getLevelUpMessage = async (guildId, level) => {
         'SELECT default_level_message FROM xp_settings WHERE guild_id = $1',
         [guildId]
     );
-    const defaultMessage = settingsResult.rows[0]?.default_level_message || '🎉 Niveau ${level}, {user} ! Continue comme ça !';
-    return defaultMessage.replace('${level}', level); // Remplace ${level} par la valeur actuelle
+    const defaultMessage = settingsResult.rows[0]?.default_level_message || '🎉 Niveau {level}, {user} ! Continue comme ça !';
+    return defaultMessage.replace('{level}', level); // Remplace {level} par la valeur actuelle
 };
 
 module.exports = (client) => {
@@ -195,7 +193,7 @@ module.exports = (client) => {
                             [userId, guildId, settings.voice_xp_per_min]
                         );
 
-                        let newXp = rows[0].xp;
+                        let new XP = rows[0].xp;
                         let newLevel = rows[0].level;
 
                         while (newXp >= getRequiredXp(newLevel + 1)) {

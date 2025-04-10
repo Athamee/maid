@@ -69,6 +69,7 @@ async function deployCommands() {
 
 async function initDatabase() {
     try {
+        // Crée les tables si elles n’existent pas
         await pool.query(`
             CREATE TABLE IF NOT EXISTS warns (
                 id SERIAL PRIMARY KEY,
@@ -98,8 +99,7 @@ async function initDatabase() {
                 image_xp INTEGER DEFAULT 15,
                 level_up_channel TEXT DEFAULT NULL,
                 excluded_roles TEXT DEFAULT '[]',
-                no_camera_channels TEXT DEFAULT '[]',
-                default_level_message TEXT DEFAULT 'Bravo à toi {user}, tu as atteins le niveau ${level} ! Continue d'explorer tes désirs intimes dans le Donjon. 😈' -- Nouveau champ pour message par défaut
+                no_camera_channels TEXT DEFAULT '[]'
             )
         `);
         await pool.query(`
@@ -119,9 +119,32 @@ async function initDatabase() {
                 PRIMARY KEY (guild_id, voice_channel_id)
             )
         `);
+
+        // Migration : Ajoute ou corrige la colonne default_level_message
+        await pool.query(`
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'xp_settings' 
+                    AND column_name = 'default_level_message'
+                ) THEN
+                    ALTER TABLE xp_settings 
+                    ADD COLUMN default_level_message TEXT DEFAULT '🎉 Niveau {level}, {user} ! Continue comme ça !';
+                ELSE
+                    -- Met à jour la valeur par défaut si la colonne existe déjà mais n’a pas la bonne valeur
+                    ALTER TABLE xp_settings 
+                    ALTER COLUMN default_level_message SET DEFAULT '🎉 Niveau {level}, {user} ! Continue comme ça !';
+                END IF;
+            END;
+            $$;
+        `);
+
         console.log('Tables warns, xp, xp_settings, level_up_messages et voice_role_settings prêtes.');
     } catch (error) {
         console.error('Erreur lors de l’initialisation de la base de données :', error.stack);
+        throw error;
     }
 }
 
