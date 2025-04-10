@@ -1,68 +1,68 @@
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const { PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const pool = require('../db');
+const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('xpsettings')
-        .setDescription('Régler ou voir les gains d’XP')
+        .setDescription('Régler ou voir les gains d’XP (admins uniquement)')
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator) // Restreint aux admins uniquement
         .addSubcommand(subcommand =>
-            subcommand.setName('set-message').setDescription('Définir l’XP par message (modo only)')
+            subcommand.setName('set-message').setDescription('Définir l’XP par message')
                 .addIntegerOption(option => option.setName('xp').setDescription('Valeur d’XP par message').setRequired(true).setMinValue(0))
         )
         .addSubcommand(subcommand =>
-            subcommand.setName('set-voice').setDescription('Définir l’XP par minute en vocal (modo only)')
+            subcommand.setName('set-voice').setDescription('Définir l’XP par minute en vocal')
                 .addIntegerOption(option => option.setName('xp').setDescription('Valeur d’XP par minute en vocal').setRequired(true).setMinValue(0))
         )
         .addSubcommand(subcommand =>
-            subcommand.setName('set-reaction').setDescription('Définir l’XP par réaction (modo only)')
+            subcommand.setName('set-reaction').setDescription('Définir l’XP par réaction')
                 .addIntegerOption(option => option.setName('xp').setDescription('Valeur d’XP par réaction').setRequired(true).setMinValue(0))
         )
         .addSubcommand(subcommand =>
-            subcommand.setName('set-image').setDescription('Définir l’XP par image (modo only)')
+            subcommand.setName('set-image').setDescription('Définir l’XP par image')
                 .addIntegerOption(option => option.setName('xp').setDescription('Valeur d’XP par image').setRequired(true).setMinValue(0))
         )
         .addSubcommand(subcommand =>
-            subcommand.setName('set-channel').setDescription('Définir le salon pour les annonces de niveau (modo only)')
+            subcommand.setName('set-channel').setDescription('Définir le salon pour les annonces de niveau')
                 .addChannelOption(option => option.setName('channel').setDescription('Salon où envoyer les montées de niveau').setRequired(true))
         )
         .addSubcommand(subcommand =>
-            subcommand.setName('set-level-message').setDescription('Définir un message personnalisé pour un niveau (modo only)')
+            subcommand.setName('set-level-message').setDescription('Définir un message personnalisé pour un niveau')
                 .addIntegerOption(option => option.setName('level').setDescription('Niveau à personnaliser').setRequired(true).setMinValue(1))
                 .addStringOption(option => option.setName('message').setDescription('Message avec {user} pour le membre et @mentions pour ping').setRequired(true))
         )
         .addSubcommand(subcommand =>
-            subcommand.setName('exclude-roles').setDescription('Exclure des rôles des gains d’XP (modo only)')
+            subcommand.setName('exclude-roles').setDescription('Exclure des rôles des gains d’XP')
                 .addStringOption(option => option.setName('roles').setDescription('Liste d’IDs de rôles séparés par des virgules').setRequired(true))
         )
         .addSubcommand(subcommand =>
-            subcommand.setName('set-no-camera').setDescription('Interdire la caméra dans des salons vocaux (modo only)')
+            subcommand.setName('set-no-camera').setDescription('Interdire la caméra dans des salons vocaux')
                 .addStringOption(option => option.setName('channels').setDescription('Liste d’IDs de salons séparés par des virgules').setRequired(true))
         )
         .addSubcommand(subcommand =>
-            subcommand.setName('set-voice-role').setDescription('Définir un rôle et canal écrit pour un salon vocal (modo only)')
+            subcommand.setName('set-voice-role').setDescription('Définir un rôle et canal écrit pour un salon vocal')
                 .addChannelOption(option => option.setName('voice_channel').setDescription('Salon vocal').setRequired(true))
                 .addRoleOption(option => option.setName('role').setDescription('Rôle à attribuer').setRequired(true))
         )
         .addSubcommand(subcommand =>
-            subcommand.setName('set-default-message').setDescription('Définir le message par défaut pour les niveaux non personnalisés (modo only)')
-                .addStringOption(option => option.setName('message').setDescription('Message avec ${level} et {user}').setRequired(true))
+            subcommand.setName('set-default-message').setDescription('Définir le message par défaut pour les niveaux non personnalisés')
+                .addStringOption(option => option.setName('message').setDescription('Message avec {level} et {user}').setRequired(true))
         )
         .addSubcommand(subcommand =>
-            subcommand.setName('view').setDescription('Voir les paramètres actuels d’XP (visible par tous)')
+            subcommand.setName('view').setDescription('Voir les paramètres actuels d’XP')
         ),
 
     async execute(interaction) {
-        const modoRoleId = process.env.MODO;
         const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
-        const hasModoRole = modoRoleId && interaction.member.roles.cache.has(modoRoleId);
         const guildId = interaction.guild.id;
         const subcommand = interaction.options.getSubcommand();
 
         try {
+            // Vérification uniquement pour les admins (modoRoleId n’est plus utilisé ici)
             if (subcommand.startsWith('set-') || subcommand === 'exclude-roles') {
-                if (!isAdmin && !hasModoRole) {
-                    return interaction.reply({ content: 'Permission refusée.', ephemeral: true });
+                if (!isAdmin) {
+                    return interaction.reply({ content: 'Permission refusée. Seuls les administrateurs peuvent modifier ces paramètres.', ephemeral: true });
                 }
 
                 if (subcommand === 'set-channel') {
@@ -106,12 +106,16 @@ module.exports = {
                         ]
                     });
                     await pool.query(
-                        'INSERT INTO voice_role_settings (guild_id, voice_channel_id, role_id, text_channel_id) VALUES ($1, $2, $3, $4) ON CONFLICT (guild_id, voice_channel_id) DO UPDATE SET role_id = $3, text_channel_id = $4',
+                        'INSERT INTO voice_role_settings (guild_id, voice_channel_id, role_id, text_channel_id) VALUES ($1, $2, $3, $4) ' +
+                        'ON CONFLICT (guild_id, voice_channel_id) DO UPDATE SET role_id = $3, text_channel_id = $4',
                         [guildId, voiceChannel.id, role.id, textChannel.id]
                     );
                     await interaction.reply({ content: `Rôle ${role} et canal ${textChannel} liés à ${voiceChannel}.`, ephemeral: true });
                 } else if (subcommand === 'set-default-message') {
                     const message = interaction.options.getString('message');
+                    if (!message) {
+                        return interaction.reply({ content: 'Le message ne peut pas être vide.', ephemeral: true });
+                    }
                     await pool.query(
                         'INSERT INTO xp_settings (guild_id, default_level_message) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET default_level_message = $2',
                         [guildId, message]
@@ -135,6 +139,7 @@ module.exports = {
                     await interaction.reply({ content: `Paramètre mis à jour : ${column.replace('_', ' ')} défini à ${xpValue} XP.`, ephemeral: true });
                 }
             } else if (subcommand === 'view') {
+                // La sous-commande 'view' est accessible aux admins uniquement ici
                 const xpSettingsResult = await pool.query('SELECT * FROM xp_settings WHERE guild_id = $1', [guildId]);
                 const xpSettings = xpSettingsResult.rows[0] || {
                     message_xp: 10,
@@ -144,7 +149,7 @@ module.exports = {
                     level_up_channel: null,
                     excluded_roles: '[]',
                     no_camera_channels: '[]',
-                    default_level_message: '🎉 Niveau ${level}, {user} ! Continue comme ça !'
+                    default_level_message: '🎉 Niveau {level}, {user} ! Continue comme ça !'
                 };
                 const excludedRoles = JSON.parse(xpSettings.excluded_roles);
                 const noCameraChannels = JSON.parse(xpSettings.no_camera_channels);
