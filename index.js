@@ -119,7 +119,7 @@ async function initDatabase() {
             )
         `);
 
-        // Migration corrigée : pas d’interpolation JavaScript, juste des placeholders statiques
+        // Migration pour default_level_message
         await pool.query(`
             DO $$
             BEGIN
@@ -134,6 +134,23 @@ async function initDatabase() {
                 ELSE
                     ALTER TABLE xp_settings 
                     ALTER COLUMN default_level_message SET DEFAULT 'Félicitations {user}, tu es désormais niveau {level} ! Continue d''explorer tes désirs intimes sur le Donjon. 😈';
+                END IF;
+            END;
+            $$;
+        `);
+
+        // Migration pour ajouter level_up_channel si elle manque
+        await pool.query(`
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'xp_settings' 
+                    AND column_name = 'level_up_channel'
+                ) THEN
+                    ALTER TABLE xp_settings 
+                    ADD COLUMN level_up_channel TEXT DEFAULT NULL;
                 END IF;
             END;
             $$;
