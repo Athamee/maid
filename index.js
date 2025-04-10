@@ -139,7 +139,7 @@ async function initDatabase() {
             $$;
         `);
 
-        // Migration pour ajouter level_up_channel si elle manque
+        // Migration pour level_up_channel
         await pool.query(`
             DO $$
             BEGIN
@@ -156,7 +156,41 @@ async function initDatabase() {
             $$;
         `);
 
-        console.log('Tables warns, xp, xp_settings, level_up_messages et voice_role_settings prêtes.');
+        // Migration pour excluded_roles
+        await pool.query(`
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'xp_settings' 
+                    AND column_name = 'excluded_roles'
+                ) THEN
+                    ALTER TABLE xp_settings 
+                    ADD COLUMN excluded_roles TEXT DEFAULT '[]';
+                END IF;
+            END;
+            $$;
+        `);
+
+        // Migration pour no_camera_channels
+        await pool.query(`
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'xp_settings' 
+                    AND column_name = 'no_camera_channels'
+                ) THEN
+                    ALTER TABLE xp_settings 
+                    ADD COLUMN no_camera_channels TEXT DEFAULT '[]';
+                END IF;
+            END;
+            $$;
+        `);
+
+        console.log('Tables warns, xp, xp_settings, level_up_messages et voice_role_settings prêtes avec toutes les migrations.');
     } catch (error) {
         console.error('Erreur lors de l’initialisation de la base de données :', error.stack);
         throw error;
@@ -248,5 +282,5 @@ async function startBot() {
         process.exit(1);
     }
 }
-
+// forcer la maj
 startBot();
