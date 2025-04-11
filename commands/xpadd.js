@@ -43,7 +43,7 @@ const getLevelUpMessage = async (guildId, level) => {
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('xpadd')
-        .setDescription('Ajouter de l’XP ou des niveaux à un membre (admin & animateur)')
+        .setDescription('Ajouter de l’XP à un membre (admin & animateur)')
         .addUserOption(option => 
             option.setName('target')
                 .setDescription('Membre à modifier')
@@ -51,13 +51,8 @@ module.exports = {
         .addIntegerOption(option => 
             option.setName('xp')
                 .setDescription('Quantité d’XP à ajouter')
-                .setRequired(false)
-                .setMinValue(0))
-        .addIntegerOption(option => 
-            option.setName('levels')
-                .setDescription('Nombre de niveaux à ajouter')
-                .setRequired(false)
-                .setMinValue(0)),
+                .setRequired(true) // Changé à true car c’est la seule option maintenant
+                .setMinValue(1)), // Minimum 1 pour éviter 0
 
     async execute(interaction) {
         const modoRoleId = process.env.MODO;
@@ -71,12 +66,7 @@ module.exports = {
         }
 
         const target = interaction.options.getUser('target');
-        const xpToAdd = interaction.options.getInteger('xp') || 0;
-        const levelsToAdd = interaction.options.getInteger('levels') || 0;
-
-        if (xpToAdd === 0 && levelsToAdd === 0) {
-            return interaction.reply({ content: 'Veuillez spécifier au moins une quantité d’XP ou de niveaux à ajouter.', ephemeral: true });
-        }
+        const xpToAdd = interaction.options.getInteger('xp');
 
         const guildId = interaction.guild.id;
         const userId = target.id;
@@ -84,21 +74,22 @@ module.exports = {
         try {
             // Récupérer le niveau initial du membre
             const initialResult = await pool.query(
-                'SELECT level FROM xp WHERE user_id = $1 AND guild_id = $2',
+                'SELECT level, xp FROM xp WHERE user_id = $1 AND guild_id = $2',
                 [userId, guildId]
             );
             const initialLevel = initialResult.rows[0]?.level || 1;
+            const initialXp = initialResult.rows[0]?.xp || 0;
 
-            // Mise à jour de l’XP, du niveau et de last_message
+            // Mise à jour de l’XP et de last_message (pas de level dans l’INSERT/UPDATE)
             const { rows } = await pool.query(
-                'INSERT INTO xp (user_id, guild_id, xp, level, last_message) VALUES ($1, $2, $3, $4, NOW()) ' +
-                'ON CONFLICT (user_id, guild_id) DO UPDATE SET xp = xp.xp + $3, level = xp.level + $4, last_message = NOW() ' +
+                'INSERT INTO xp (user_id, guild_id, xp, last_message) VALUES ($1, $2, $3, NOW()) ' +
+                'ON CONFLICT (user_id, guild_id) DO UPDATE SET xp = xp.xp + $3, last_message = NOW() ' +
                 'RETURNING xp, level',
-                [userId, guildId, xpToAdd, levelsToAdd]
+                [userId, guildId, xpToAdd]
             );
 
             let newXp = rows[0].xp;
-            let newLevel = rows[0].level;
+            let newLevel = rows[0].level || 1; // Fallback à 1 si level est null
 
             // Recalculer le niveau basé sur l’XP total
             let recalculatedLevel = 1;
@@ -147,25 +138,28 @@ module.exports = {
                             const imagePath = getLevelUpImage(level);
                             await channel.send({ content: formattedMessage, files: [imagePath] });
                         }
+                    } else {
+                        console.warn(`Canal level_up_channel (${levelUpChannelId}) introuvable.`);
                     }
+                } else {
+                    console.warn(`level_up_channel non défini pour guild ${guildId}.`);
                 }
             }
 
             const embed = new EmbedBuilder()
-                .setTitle(`XP/Niveaux ajoutés pour ${target.tag}`)
+                .setTitle(`XP ajouté pour ${target.tag}`)
                 .setColor('#00FFAA')
                 .addFields(
                     { name: 'XP ajouté', value: `${xpToAdd}`, inline: true },
-                    { name: 'Niveaux ajoutés', value: `${levelsToAdd}`, inline: true },
                     { name: 'Nouveau total XP', value: `${newXp}`, inline: true },
                     { name: 'Nouveau niveau', value: `${newLevel}`, inline: true }
                 );
 
             await interaction.reply({ embeds: [embed], ephemeral: true });
-            console.log(`XP/Niveaux ajoutés pour ${target.tag} par ${interaction.user.tag}: +${xpToAdd} XP, +${levelsToAdd} niveaux`);
+            console.log(`XP ajouté pour ${target.tag} par ${interaction.user.tag}: +${xpToAdd} XP, nouveau niveau: ${newLevel}`);
         } catch (error) {
             console.error('Erreur xpadd :', error.stack);
-            await interaction.reply({ content: 'Erreur lors de l’ajout d’XP ou de niveaux.', ephemeral: true });
+            await interaction.reply({ content: 'Erreur lors de l’ajout d’XP.', ephemeral: true });
         }
     }
 };
