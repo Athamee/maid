@@ -32,9 +32,11 @@ module.exports = {
             const level = xpData.level || 1;
             const lastMessage = xpData.last_message ? new Date(xpData.last_message).toLocaleDateString() : 'Jamais';
 
-            // Calcul de l’XP nécessaire pour le prochain niveau (exemple : 100 XP par niveau)
-            const xpToNextLevel = level * 100;
-            const xpRemaining = xpToNextLevel - totalXp;
+            // Formule pour l’XP requis : 1000 + (level - 1)² * 400
+            const getRequiredXp = (lvl) => 1000 + Math.pow(lvl - 1, 2) * 400;
+            const xpForCurrentLevel = getRequiredXp(level); // XP requis pour atteindre le niveau actuel
+            const xpForNextLevel = getRequiredXp(level + 1); // XP requis pour le prochain niveau
+            const xpProgress = totalXp - xpForCurrentLevel; // Progression dans le niveau actuel
 
             // Récupérer les rôles du membre (exclut @everyone)
             const roles = targetMember.roles.cache
@@ -48,9 +50,11 @@ module.exports = {
                 .setThumbnail(targetMember.user.displayAvatarURL({ dynamic: true }))
                 .setColor('#00FFAA')
                 .addFields(
-                    { name: 'Niveau', value: `${level}`, inline: true },
-                    { name: 'XP Total', value: `${totalXp}`, inline: true },
-                    { name: 'XP restant pour le prochain niveau', value: `${xpRemaining}`, inline: true },
+                    {
+                        name: 'XP',
+                        value: `Niveau: ${level} | XP total: ${totalXp} | Prochain niveau: ${xpProgress} / ${xpForNextLevel}`,
+                        inline: false
+                    },
                     { name: 'Dernier message', value: lastMessage, inline: false },
                     { name: 'Rôles', value: roles, inline: false }
                 )
@@ -59,7 +63,7 @@ module.exports = {
 
             // Envoyer l’embed visible par tous
             await interaction.editReply({ embeds: [embed] });
-            console.log(`Profil affiché pour ${targetMember.user.tag} : Niveau ${level}, XP ${totalXp}, Rôles : ${roles}`);
+            console.log(`Profil affiché pour ${targetMember.user.tag} : Niveau ${level}, XP ${totalXp}, Prochain niveau ${xpProgress}/${xpForNextLevel}, Rôles : ${roles}`);
         } catch (error) {
             console.error(`Erreur dans /profile pour ${interaction.user.tag} :`, error.stack);
             await interaction.editReply({ content: 'Erreur lors de l’affichage du profil.', ephemeral: true });

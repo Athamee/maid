@@ -25,10 +25,12 @@ const levelUpImages = {
 const defaultImage = path.join(__dirname, '../img/default.png');
 
 const getLevelUpImage = (level) => {
-    const levels = Object.keys(levelUpImages).map(Number).sort((a, b) => b - a);
-    for (const l of levels) {
-        if (level >= l) return levelUpImages[l];
+    // Retourne une image spécifique uniquement si le niveau correspond exactement
+    if (levelUpImages[level]) {
+        console.log(`Image spécifique utilisée pour le niveau ${level}: ${levelUpImages[level]}`);
+        return levelUpImages[level];
     }
+    console.log(`Image par défaut utilisée pour le niveau ${level}: ${defaultImage}`);
     return defaultImage;
 };
 
