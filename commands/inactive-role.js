@@ -4,7 +4,7 @@ const pool = require('../db'); // Connexion à ta base PostgreSQL
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('inactive-role')
-        .setDescription('Ajoute ou enlève un rôle aux membres selon leur activité (admins uniquement)')
+        .setDescription('Ajoute ou enlève un rôle aux membres selon leur activité et envoie un message (admins uniquement)')
         .addIntegerOption(option =>
             option.setName('semaines')
                 .setDescription('Nombre de semaines d’inactivité pour attribuer le rôle')
@@ -14,6 +14,10 @@ module.exports = {
             option.setName('role')
                 .setDescription('Rôle à attribuer aux membres inactifs ou à enlever aux actifs')
                 .setRequired(true))
+        .addChannelOption(option =>
+            option.setName('salon')
+                .setDescription('Salon où envoyer le message pingant le rôle inactif')
+                .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
@@ -22,7 +26,13 @@ module.exports = {
 
             const weeksInactive = interaction.options.getInteger('semaines');
             const inactiveRole = interaction.options.getRole('role');
+            const targetChannel = interaction.options.getChannel('salon');
             const guild = interaction.guild;
+
+            // Vérification que le salon est un salon textuel
+            if (targetChannel.type !== 0) { // 0 = GuildText
+                throw new Error('Le salon spécifié doit être un salon textuel.');
+            }
 
             // Calcul de la date limite (ex. 4 semaines dans le passé)
             const cutoffDate = new Date(Date.now() - weeksInactive * 7 * 24 * 60 * 60 * 1000);
@@ -42,7 +52,7 @@ module.exports = {
             const memberIds = [...xpMap.keys()];
             const members = await guild.members.fetch({ user: memberIds }).catch(err => {
                 console.warn('Certains membres n’ont pas pu être récupérés (peut-être partis) :', err.message);
-                return new Map(); // Retourne une Map vide si erreur
+                return new Map();
             });
 
             let addedCount = 0;
@@ -81,6 +91,20 @@ module.exports = {
                     addedCount++;
                     console.log(`Rôle ${inactiveRole.name} ajouté à ${member.user.tag} (inactif depuis arrivée ${lastActivity.toISOString()})`);
                 }
+            }
+
+            // Envoi du message personnalisé dans le salon spécifié
+            if (addedCount > 0 || removedCount > 0) {
+                const messageContent = `
+                    **Mise à jour de l’inactivité :**
+                    - ${addedCount} membres ont été marqués comme inactifs et ont reçu le rôle <@&${inactiveRole.id}>.
+                    - ${removedCount} membres sont redevenus actifs et ont perdu le rôle.
+                    *Période d’inactivité : ${weeksInactive} semaines.*
+                `.trim();
+                await targetChannel.send(messageContent);
+                console.log(`Message envoyé dans ${targetChannel.name} (ID: ${targetChannel.id})`);
+            } else {
+                console.log('Aucun changement détecté, pas de message envoyé.');
             }
 
             await interaction.editReply({
