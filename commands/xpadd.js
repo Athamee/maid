@@ -51,8 +51,8 @@ module.exports = {
         .addIntegerOption(option => 
             option.setName('xp')
                 .setDescription('Quantité d’XP à ajouter')
-                .setRequired(true) // Changé à true car c’est la seule option maintenant
-                .setMinValue(1)), // Minimum 1 pour éviter 0
+                .setRequired(true)
+                .setMinValue(1)),
 
     async execute(interaction) {
         const modoRoleId = process.env.MODO;
@@ -61,8 +61,11 @@ module.exports = {
         const hasModoRole = modoRoleId && interaction.member.roles.cache.has(modoRoleId);
         const hasAnimatorRole = animatorRoleId && interaction.member.roles.cache.has(animatorRoleId);
 
+        // Reporter la réponse pour éviter Unknown Interaction
+        await interaction.deferReply();
+
         if (!isAdmin && !hasModoRole && !hasAnimatorRole) {
-            return interaction.reply({ content: 'Permission refusée.', ephemeral: true });
+            return interaction.editReply({ content: 'Permission refusée.', ephemeral: true });
         }
 
         const target = interaction.options.getUser('target');
@@ -80,7 +83,7 @@ module.exports = {
             const initialLevel = initialResult.rows[0]?.level || 1;
             const initialXp = initialResult.rows[0]?.xp || 0;
 
-            // Mise à jour de l’XP et de last_message (pas de level dans l’INSERT/UPDATE)
+            // Mise à jour de l’XP et de last_message
             const { rows } = await pool.query(
                 'INSERT INTO xp (user_id, guild_id, xp, last_message) VALUES ($1, $2, $3, NOW()) ' +
                 'ON CONFLICT (user_id, guild_id) DO UPDATE SET xp = xp.xp + $3, last_message = NOW() ' +
@@ -89,7 +92,7 @@ module.exports = {
             );
 
             let newXp = rows[0].xp;
-            let newLevel = rows[0].level || 1; // Fallback à 1 si level est null
+            let newLevel = rows[0].level || 1;
 
             // Recalculer le niveau basé sur l’XP total
             let recalculatedLevel = 1;
@@ -105,7 +108,7 @@ module.exports = {
                 );
             }
 
-            // Vérifier si le niveau a augmenté et envoyer les messages appropriés
+            // Vérifier si le niveau a augmenté et envoyer le message pour le dernier niveau uniquement
             if (newLevel > initialLevel) {
                 const settingsResult = await pool.query(
                     'SELECT level_up_channel FROM xp_settings WHERE guild_id = $1',
@@ -116,28 +119,10 @@ module.exports = {
                 if (levelUpChannelId) {
                     const channel = interaction.client.channels.cache.get(levelUpChannelId);
                     if (channel) {
-                        const milestoneLevels = [10, 15, 20];
-                        const levelsToAnnounce = [];
-
-                        // Ajouter les milestones (10, 15, 20) franchis
-                        for (let level = initialLevel + 1; level <= newLevel; level++) {
-                            if (milestoneLevels.includes(level)) {
-                                levelsToAnnounce.push(level);
-                            }
-                        }
-
-                        // Ajouter le dernier niveau atteint s’il n’est pas déjà dans les milestones
-                        if (!levelsToAnnounce.includes(newLevel)) {
-                            levelsToAnnounce.push(newLevel);
-                        }
-
-                        // Envoyer un message pour chaque niveau à annoncer
-                        for (const level of levelsToAnnounce) {
-                            const messageTemplate = await getLevelUpMessage(guildId, level);
-                            const formattedMessage = messageTemplate.replace('{user}', `<@${userId}>`);
-                            const imagePath = getLevelUpImage(level);
-                            await channel.send({ content: formattedMessage, files: [imagePath] });
-                        }
+                        const messageTemplate = await getLevelUpMessage(guildId, newLevel);
+                        const formattedMessage = messageTemplate.replace('{user}', `<@${userId}>`);
+                        const imagePath = getLevelUpImage(newLevel);
+                        await channel.send({ content: formattedMessage, files: [imagePath] });
                     } else {
                         console.warn(`Canal level_up_channel (${levelUpChannelId}) introuvable.`);
                     }
@@ -150,16 +135,15 @@ module.exports = {
                 .setTitle(`XP ajouté pour ${target.tag}`)
                 .setColor('#00FFAA')
                 .addFields(
-                    { name: 'XP ajouté', value: `${xpToAdd}`, inline: true },
-                    { name: 'Nouveau total XP', value: `${newXp}`, inline: true },
                     { name: 'Nouveau niveau', value: `${newLevel}`, inline: true }
                 );
 
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            // Réponse visible pour tous
+            await interaction.editReply({ embeds: [embed] });
             console.log(`XP ajouté pour ${target.tag} par ${interaction.user.tag}: +${xpToAdd} XP, nouveau niveau: ${newLevel}`);
         } catch (error) {
             console.error('Erreur xpadd :', error.stack);
-            await interaction.reply({ content: 'Erreur lors de l’ajout d’XP.', ephemeral: true });
+            await interaction.editReply({ content: 'Erreur lors de l’ajout d’XP.', ephemeral: true });
         }
     }
 };
