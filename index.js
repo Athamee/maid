@@ -249,20 +249,37 @@ client.on('interactionCreate', async interaction => {
         }
     }
 
-    // Gestion des boutons (pour ticket.js)
+    // Gestion des boutons (générique pour toutes les commandes)
     if (interaction.isButton()) {
-        const command = client.commands.get('ticket');
-        if (command) {
-            try {
-                if (interaction.customId === 'ticket_type_6' && command.handleButtonInteraction) {
-                    console.log(`Bouton ticket_type_6 cliqué par ${interaction.user.tag}`);
+        // Recherche de la commande associée au customId
+        for (const [name, command] of client.commands) {
+            if (command.handleButtonInteraction && interaction.customId === 'accept_reglement') {
+                try {
+                    console.log(`Bouton ${interaction.customId} cliqué par ${interaction.user.tag} (commande : ${name})`);
                     await command.handleButtonInteraction(interaction);
-                } else if (interaction.customId === 'close_ticket' && command.handleCloseTicket) {
+                    return; // Sortir après avoir traité
+                } catch (error) {
+                    console.error(`Erreur dans la gestion du bouton ${interaction.customId} pour ${name} :`, error.message, error.stack);
+                    if (!interaction.replied && !interaction.deferred) {
+                        await interaction.reply({ content: 'Erreur lors du traitement du bouton !', ephemeral: true });
+                    }
+                }
+            }
+        }
+
+        // Gestion spécifique pour ticket.js (conservée)
+        const ticketCommand = client.commands.get('ticket');
+        if (ticketCommand) {
+            try {
+                if (interaction.customId === 'ticket_type_6' && ticketCommand.handleButtonInteraction) {
+                    console.log(`Bouton ticket_type_6 cliqué par ${interaction.user.tag}`);
+                    await ticketCommand.handleButtonInteraction(interaction);
+                } else if (interaction.customId === 'close_ticket' && ticketCommand.handleCloseTicket) {
                     console.log(`Bouton close_ticket cliqué par ${interaction.user.tag}`);
-                    await command.handleCloseTicket(interaction);
+                    await ticketCommand.handleCloseTicket(interaction);
                 }
             } catch (error) {
-                console.error(`Erreur dans la gestion du bouton ${interaction.customId} :`, error.message, error.stack);
+                console.error(`Erreur dans la gestion du bouton ${interaction.customId} pour ticket :`, error.message, error.stack);
                 if (!interaction.replied && !interaction.deferred) {
                     await interaction.reply({ content: 'Erreur lors du traitement du bouton !', ephemeral: true });
                 }
