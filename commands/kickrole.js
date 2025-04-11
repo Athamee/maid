@@ -28,7 +28,7 @@ module.exports = {
         const role = interaction.options.getRole('role');
         const reason = interaction.options.getString('raison');
         const guild = interaction.guild;
-        const inviteLink = 'https://discord.gg/TON_LIEN_DINVITATION'; // Remplace par ton lien d'invitation permanent
+        const inviteLink = 'https://discord.gg/aGBEvsTAZJ'; // Remplace par ton lien d'invitation permanent
 
         try {
             // Récupérer tous les membres avec ce rôle
