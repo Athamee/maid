@@ -100,21 +100,21 @@ module.exports = {
 
         console.log(`[Commande /admit] Cible : ${targetMember.user.tag} (ID: ${targetMember.id}), Rôle : ${selectedRole}`);
 
-        // Configuration des rôles, canaux et messages personnalisés
+        // Configuration des rôles, canaux et messages personnalisés avec les nouveaux noms
         const rolesMap = {
-            'roleadd': process.env.TAMPON,
-            'roleadd2': process.env.CERTIF,
-            'roleadd3': process.env.DM,
-            'roleadd4': process.env.GALERIE,
-            'roleadd5': process.env.TORTURE,
+            'roleadd': process.env.TAMPON_ROLE_ID,
+            'roleadd2': process.env.CERTIFIE_ROLE_ID,
+            'roleadd3': process.env.DM_ROLE_ID,
+            'roleadd4': process.env.GALERIE_ROLE_ID,
+            'roleadd5': process.env.TORTURE_ROLE_ID,
         };
 
         const channelMap = {
-            'roleadd': process.env.WELCOME,
-            'roleadd2': process.env.CHAMBRE,
-            'roleadd3': process.env.CHAMBRE,
-            'roleadd4': process.env.CHAMBRE,
-            'roleadd5': process.env.CHAMBRE,
+            'roleadd': process.env.ENTREEE_SORTIE_CHANNEL_ID,
+            'roleadd2': process.env.SALLE_ELEVATION_CHANNEL_ID,
+            'roleadd3': process.env.SALLE_ELEVATION_CHANNEL_ID,
+            'roleadd4': process.env.SALLE_ELEVATION_CHANNEL_ID,
+            'roleadd5': process.env.SALLE_ELEVATION_CHANNEL_ID,
         };
 
         const welcomeMessageMap = {
@@ -126,7 +126,7 @@ module.exports = {
         };
 
         const roleToAddId = rolesMap[selectedRole];
-        const roleToRemoveId = process.env.ACCEPTED; // Retiré uniquement pour 'roleadd'
+        const roleToRemoveId = process.env.REGLEMENT_ACCEPTED_ROLE_ID; // Retiré uniquement pour 'roleadd'
         const channelId = channelMap[selectedRole];
 
         try {
