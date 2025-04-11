@@ -4,7 +4,7 @@ require('dotenv').config();
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('reglement')
-        .setDescription('Poster un message pour accepter le règlement et obtenir un rôle (admins uniquement)'),
+        .setDescription('Poster un message avec un bouton pour accepter le règlement (admins uniquement)'),
 
     async execute(interaction) {
         const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
@@ -36,32 +36,24 @@ module.exports = {
                 console.warn(`Rôle ARRIVANT (${arrivantRoleId}) introuvable dans le cache`);
             }
 
-            // Embed pour le message principal
-            const embed = new EmbedBuilder()
-                .setTitle('📜 Acceptation du règlement')
-                .setDescription('Cliquez sur le bouton ci-dessous pour accepter le règlement et obtenir un rôle d’accès.')
-                .setColor('#00FFAA')
-                .setFooter({ text: `Serveur : ${interaction.guild.name}` })
-                .setTimestamp();
-
+            // Bouton seul, sans texte
             const button = new ButtonBuilder()
                 .setCustomId('accept_reglement')
                 .setLabel('Accepter le règlement')
-                .setStyle(ButtonStyle.Primary);
+                .setStyle(ButtonStyle.Secondary);
 
             const actionRow = new ActionRowBuilder().addComponents(button);
 
-            // Envoyer l’embed avec le bouton dans le canal
+            // Envoyer uniquement le bouton dans le canal (pas d’embed)
             await interaction.channel.send({
-                embeds: [embed],
                 components: [actionRow],
             });
-            console.log(`Embed avec bouton envoyé dans ${interaction.channel.name} (ID: ${interaction.channel.id})`);
+            console.log(`Bouton envoyé dans ${interaction.channel.name} (ID: ${interaction.channel.id})`);
 
             // Confirmation éphémère pour l’admin
             const adminEmbed = new EmbedBuilder()
                 .setTitle('Commande exécutée')
-                .setDescription('Le message pour accepter le règlement a été posté avec succès.')
+                .setDescription('Le bouton pour accepter le règlement a été posté avec succès.')
                 .setColor('#00FFAA');
 
             await interaction.editReply({ embeds: [adminEmbed], ephemeral: true });
@@ -76,8 +68,8 @@ module.exports = {
 
         try {
             const member = interaction.member;
-            const arrivantRoleId = process.env.ARRIVANT_ROLE_ID; // Uniformisé
-            const reglementAcceptedRoleId = process.env.REGLEMENT_ACCEPTED_ROLE_ID; // Uniformisé
+            const arrivantRoleId = process.env.ARRIVANT_ROLE_ID;
+            const reglementAcceptedRoleId = process.env.REGLEMENT_ACCEPTED_ROLE_ID;
 
             const acceptedRole = interaction.guild.roles.cache.get(reglementAcceptedRoleId);
             const unacceptedRole = interaction.guild.roles.cache.get(arrivantRoleId);
