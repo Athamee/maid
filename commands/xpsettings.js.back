@@ -53,6 +53,7 @@ module.exports = {
         .addSubcommand(subcommand =>
             subcommand.setName('view').setDescription('Voir les paramètres actuels d’XP')
         )
+        // Nouvelles sous-commandes pour effacer
         .addSubcommand(subcommand =>
             subcommand.setName('clear-channel').setDescription('Effacer le salon des annonces de niveau')
         )
@@ -114,22 +115,11 @@ module.exports = {
                     const voiceChannel = interaction.options.getChannel('voice_channel');
                     const role = interaction.options.getRole('role');
                     const textChannel = await interaction.guild.channels.create({
-                        name: voiceChannel.name, // Même nom que le canal vocal, sans "vocal-"
-                        type: 0, // Canal textuel
-                        parent: voiceChannel.parentId, // Placer dans la même catégorie que le canal vocal
+                        name: `vocal-${voiceChannel.name}`,
+                        type: 0,
                         permissionOverwrites: [
-                            { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] }, // Tout le monde ne voit pas
-                            { 
-                                id: role.id, 
-                                allow: [
-                                    PermissionFlagsBits.ViewChannel,         // Voir le canal
-                                    PermissionFlagsBits.SendMessages,        // Envoyer des messages
-                                    PermissionFlagsBits.ReadMessageHistory,  // Lire l’historique
-                                    PermissionFlagsBits.AddReactions,        // Ajouter des réactions
-                                    PermissionFlagsBits.EmbedLinks,          // Inclure des liens
-                                    PermissionFlagsBits.UseExternalEmojis    // Utiliser des emojis externes
-                                ]
-                            }
+                            { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+                            { id: role.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }
                         ]
                     });
                     await pool.query(
