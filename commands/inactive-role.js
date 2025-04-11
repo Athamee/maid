@@ -118,8 +118,7 @@ module.exports = {
                     *Période d’inactivité : ${weeksInactive} semaines.*
 
                      * **Si vous êtes dans ce salon c'est que vous êtes inactifs !**
-                    > *Vous devriez revenir pour participer, sinon la voiture-balai du Donjon vous emmènera prochainement vers la porte.
-
+                    > *Vous devriez revenir pour participer, sinon la voiture-balai du Donjon vous emmènera prochainement vers la porte.*
                     ***On vous attends, bandes de torturées & torturés du bocal !***
                     😈
                 `.trim();
