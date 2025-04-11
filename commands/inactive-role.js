@@ -34,13 +34,15 @@ module.exports = {
                 throw new Error('Le salon spécifié doit être un salon textuel.');
             }
 
-            // Rôle des arrivants à ignorer (à définir dans .env ou ici)
-            const arrivantRoleId = process.env.ARRIVANT_ROLE_ID || 'ID_DU_ROLE_ARRIVANT'; // Remplace par l’ID réel si pas dans .env
+            // Rôles des arrivants à ignorer (deux variables distinctes)
+            const arrivantRoleId1 = process.env.ARRIVANT_ROLE_ID_1 || 'ID_DU_ROLE_ARRIVANT_1'; // Fallback
+            const partenaireRoleId = process.env.PARTENAIRE_ROLE_ID || 'ID_DU_ROLE_PARTENAIRE'; // Fallback
+            const arrivantRoleIds = [arrivantRoleId1, partenaireRoleId];
 
-            // Calcul de la date limite (ex. 4 semaines dans le passé)
+            // Calcul de la date limite (ex. X semaines dans le passé)
             const cutoffDate = new Date(Date.now() - weeksInactive * 7 * 24 * 60 * 60 * 1000);
 
-            console.log(`Vérification des membres pour ${weeksInactive} semaines sans prise d’XP avec le rôle ${inactiveRole.name}, ignorant le rôle <@&${arrivantRoleId}>`);
+            console.log(`Vérification des membres pour ${weeksInactive} semaines sans prise d’XP avec le rôle ${inactiveRole.name}, ignorant les rôles ${arrivantRoleIds.map(id => `<@&${id}>`).join(', ')}`);
 
             // Récupération des membres depuis la base de données avec leur dernière prise d’XP
             const { rows: xpData } = await pool.query(
@@ -66,9 +68,9 @@ module.exports = {
                 const member = members.get(userId);
                 if (!member || member.user.bot) continue; // Ignore si membre absent ou bot
 
-                // Ignorer les membres avec le rôle "Arrivant"
-                if (member.roles.cache.has(arrivantRoleId)) {
-                    console.log(`Membre ${member.user.tag} ignoré (possède le rôle <@&${arrivantRoleId}>)`);
+                // Ignorer les membres avec l’un des rôles "Arrivant"
+                if (arrivantRoleIds.some(roleId => member.roles.cache.has(roleId))) {
+                    console.log(`Membre ${member.user.tag} ignoré (possède un rôle ignoré : ${arrivantRoleIds.filter(id => member.roles.cache.has(id)).map(id => `<@&${id}>`).join(', ')})`);
                     continue;
                 }
 
@@ -92,9 +94,9 @@ module.exports = {
                 if (member.user.bot) continue; // Ignore les bots
                 if (xpMap.has(member.id)) continue; // Déjà traité
 
-                // Ignorer les membres avec le rôle "Arrivant"
-                if (member.roles.cache.has(arrivantRoleId)) {
-                    console.log(`Membre ${member.user.tag} ignoré (possède le rôle <@&${arrivantRoleId}>)`);
+                // Ignorer les membres avec l’un des rôles "Arrivant"
+                if (arrivantRoleIds.some(roleId => member.roles.cache.has(roleId))) {
+                    console.log(`Membre ${member.user.tag} ignoré (possède un rôle ignoré : ${arrivantRoleIds.filter(id => member.roles.cache.has(id)).map(id => `<@&${id}>`).join(', ')})`);
                     continue;
                 }
 
