@@ -115,8 +115,8 @@ module.exports = {
             if (addedCount > 0 || removedCount > 0) {
                 const messageContent = `
     **Mise à jour de l’inactivité :**
-    - ${addedCount} membres n’ont pas gagné d’XP et ont reçu le rôle <@&${inactiveRole.id}>.
-    - ${removedCount} membres ont repris de l’XP et ont perdu le rôle.
+    - ${addedCount} membres sont devenus des petits fantômes et ont reçu le rôle <@&${inactiveRole.id}>.
+    - ${removedCount} membres ont repris une activité et sont de retour parmis les vivants.
     *Période d’inactivité : ${weeksInactive} semaines.*
 
     
