@@ -6,7 +6,7 @@ const path = require('path');
 // Formule pour XP requis au niveau suivant : 1000 + (level-1)^2 * 400
 const getRequiredXp = (level) => 1000 + Math.pow(level - 1, 2) * 400;
 
-// Configuration des images pour les montées de niveau (comme dans messageHandler.js)
+// Configuration des images pour les montées de niveau
 const levelUpImages = {
     5: path.join(__dirname, '../img/level5.png'),
     10: path.join(__dirname, '../img/level10.png'),
@@ -114,7 +114,7 @@ module.exports = {
                 );
             }
 
-            // Vérifier si le niveau a augmenté et envoyer un message dans level_up_channel
+            // Vérifier si le niveau a augmenté et envoyer les messages appropriés
             if (newLevel > initialLevel) {
                 const settingsResult = await pool.query(
                     'SELECT level_up_channel FROM xp_settings WHERE guild_id = $1',
@@ -125,7 +125,23 @@ module.exports = {
                 if (levelUpChannelId) {
                     const channel = interaction.client.channels.cache.get(levelUpChannelId);
                     if (channel) {
+                        const milestoneLevels = [10, 15, 20];
+                        const levelsToAnnounce = [];
+
+                        // Ajouter les milestones (10, 15, 20) franchis
                         for (let level = initialLevel + 1; level <= newLevel; level++) {
+                            if (milestoneLevels.includes(level)) {
+                                levelsToAnnounce.push(level);
+                            }
+                        }
+
+                        // Ajouter le dernier niveau atteint s’il n’est pas déjà dans les milestones
+                        if (!levelsToAnnounce.includes(newLevel)) {
+                            levelsToAnnounce.push(newLevel);
+                        }
+
+                        // Envoyer un message pour chaque niveau à annoncer
+                        for (const level of levelsToAnnounce) {
                             const messageTemplate = await getLevelUpMessage(guildId, level);
                             const formattedMessage = messageTemplate.replace('{user}', `<@${userId}>`);
                             const imagePath = getLevelUpImage(level);
