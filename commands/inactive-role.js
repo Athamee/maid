@@ -34,10 +34,13 @@ module.exports = {
                 throw new Error('Le salon spécifié doit être un salon textuel.');
             }
 
+            // Rôle des arrivants à ignorer (à définir dans .env ou ici)
+            const arrivantRoleId = process.env.ARRIVANT_ROLE_ID || 'ID_DU_ROLE_ARRIVANT'; // Remplace par l’ID réel si pas dans .env
+
             // Calcul de la date limite (ex. 4 semaines dans le passé)
             const cutoffDate = new Date(Date.now() - weeksInactive * 7 * 24 * 60 * 60 * 1000);
 
-            console.log(`Vérification des membres pour ${weeksInactive} semaines d’inactivité avec le rôle ${inactiveRole.name}`);
+            console.log(`Vérification des membres pour ${weeksInactive} semaines d’inactivité avec le rôle ${inactiveRole.name}, ignorant le rôle <@&${arrivantRoleId}>`);
 
             // Récupération des membres depuis la base de données avec leur dernière activité
             const { rows: xpData } = await pool.query(
@@ -63,6 +66,12 @@ module.exports = {
                 const member = members.get(userId);
                 if (!member || member.user.bot) continue; // Ignore si membre absent ou bot
 
+                // Ignorer les membres avec le rôle "Arrivant"
+                if (member.roles.cache.has(arrivantRoleId)) {
+                    console.log(`Membre ${member.user.tag} ignoré (possède le rôle <@&${arrivantRoleId}>)`);
+                    continue;
+                }
+
                 const lastActivity = lastMessage;
                 const isInactive = lastActivity < cutoffDate;
 
@@ -82,6 +91,12 @@ module.exports = {
             for (const member of allMembers.values()) {
                 if (member.user.bot) continue; // Ignore les bots
                 if (xpMap.has(member.id)) continue; // Déjà traité
+
+                // Ignorer les membres avec le rôle "Arrivant"
+                if (member.roles.cache.has(arrivantRoleId)) {
+                    console.log(`Membre ${member.user.tag} ignoré (possède le rôle <@&${arrivantRoleId}>)`);
+                    continue;
+                }
 
                 const lastActivity = member.joinedAt;
                 const isInactive = lastActivity < cutoffDate;
