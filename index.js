@@ -229,6 +229,7 @@ client.on('guildMemberRemove', async member => {
 });
 
 client.on('interactionCreate', async interaction => {
+    // Gestion des commandes Slash
     if (interaction.isCommand()) {
         const command = client.commands.get(interaction.commandName);
         if (!command) {
@@ -248,6 +249,7 @@ client.on('interactionCreate', async interaction => {
         }
     }
 
+    // Gestion des boutons (pour ticket.js)
     if (interaction.isButton()) {
         const command = client.commands.get('ticket');
         if (command) {
@@ -267,6 +269,22 @@ client.on('interactionCreate', async interaction => {
             }
         }
     }
+
+    // Gestion des menus déroulants (pour ticket-menu.js)
+    if (interaction.isStringSelectMenu()) {
+        const command = client.commands.get('ticket-menu');
+        if (command && command.handleMenuInteraction) {
+            try {
+                console.log(`Menu déroulant sélectionné par ${interaction.user.tag} (customId: ${interaction.customId})`);
+                await command.handleMenuInteraction(interaction);
+            } catch (error) {
+                console.error(`Erreur dans la gestion du menu ${interaction.customId} :`, error.message, error.stack);
+                if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({ content: 'Erreur lors du traitement du menu !', ephemeral: true });
+                }
+            }
+        }
+    }
 });
 
 require('./handlers/messageHandler')(client);
@@ -282,5 +300,5 @@ async function startBot() {
         process.exit(1);
     }
 }
-// forcer la maj
+// Forcer la mise à jour
 startBot();
