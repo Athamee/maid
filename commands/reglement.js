@@ -44,7 +44,7 @@ module.exports = {
 
             const actionRow = new ActionRowBuilder().addComponents(button);
 
-            // Envoyer uniquement le bouton dans le canal (pas d’embed)
+            // Envoyer uniquement le bouton dans le canal
             await interaction.channel.send({
                 components: [actionRow],
             });
@@ -71,12 +71,33 @@ module.exports = {
             const arrivantRoleId = process.env.ARRIVANT_ROLE_ID;
             const reglementAcceptedRoleId = process.env.REGLEMENT_ACCEPTED_ROLE_ID;
 
+            console.log(`Rôles configurés : ARRIVANT_ROLE_ID=${arrivantRoleId}, REGLEMENT_ACCEPTED_ROLE_ID=${reglementAcceptedRoleId}`);
+
             const acceptedRole = interaction.guild.roles.cache.get(reglementAcceptedRoleId);
             const unacceptedRole = interaction.guild.roles.cache.get(arrivantRoleId);
 
+            // Vérification des rôles
             if (!acceptedRole) {
                 console.error(`Rôle REGLEMENT_ACCEPTED (${reglementAcceptedRoleId}) introuvable`);
                 return interaction.reply({ content: 'Erreur : Le rôle REGLEMENT_ACCEPTED est introuvable.', ephemeral: true });
+            }
+            if (!unacceptedRole) {
+                console.warn(`Rôle ARRIVANT (${arrivantRoleId}) introuvable, poursuite sans retrait`);
+            }
+
+            // Vérification des permissions du bot
+            const botMember = interaction.guild.members.me;
+            if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) {
+                console.error('Le bot n’a pas la permission ManageRoles');
+                return interaction.reply({ content: 'Erreur : Le bot n’a pas la permission de gérer les rôles.', ephemeral: true });
+            }
+
+            if (acceptedRole.position > botMember.roles.highest.position) {
+                console.error(`Le rôle REGLEMENT_ACCEPTED (${reglementAcceptedRoleId}) est plus haut que le rôle du bot`);
+                return interaction.reply({ content: 'Erreur : Le rôle à attribuer est trop haut dans la hiérarchie pour le bot.', ephemeral: true });
+            }
+            if (unacceptedRole && unacceptedRole.position > botMember.roles.highest.position) {
+                console.warn(`Le rôle ARRIVANT (${arrivantRoleId}) est plus haut que le rôle du bot, impossible de le retirer`);
             }
 
             // Si le membre a déjà le rôle ACCEPTED
@@ -88,10 +109,14 @@ module.exports = {
                 });
             }
 
-            // Supprimer le rôle UNACCEPTED si présent
+            // Supprimer le rôle UNACCEPTED si présent et possible
             if (unacceptedRole && member.roles.cache.has(arrivantRoleId)) {
-                await member.roles.remove(unacceptedRole);
-                console.log(`Rôle ${unacceptedRole.name} retiré de ${member.user.tag}`);
+                try {
+                    await member.roles.remove(unacceptedRole);
+                    console.log(`Rôle ${unacceptedRole.name} retiré de ${member.user.tag}`);
+                } catch (error) {
+                    console.warn(`Échec du retrait du rôle ${unacceptedRole.name} pour ${member.user.tag} :`, error.message);
+                }
             }
 
             // Ajouter le rôle ACCEPTED
