@@ -8,8 +8,8 @@ const getRequiredXp = (level) => 1000 + Math.pow(level - 1, 2) * 400;
 
 // Configuration des images pour les montées de niveau
 const levelUpImages = {
-    5: path.join(__dirname, '../img/level5.png'),
     10: path.join(__dirname, '../img/level10.png'),
+    15: path.join(__dirname, '../img/level15.png'),
     20: path.join(__dirname, '../img/level20.png')
 };
 const defaultImage = path.join(__dirname, '../img/default.png');
