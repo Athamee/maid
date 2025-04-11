@@ -108,6 +108,10 @@ module.exports = {
                 );
             }
 
+            // Calculer l’XP restant pour le prochain niveau
+            const xpForNextLevel = getRequiredXp(newLevel + 1);
+            const xpRemaining = xpForNextLevel - newXp;
+
             // Vérifier si le niveau a augmenté et envoyer le message pour le dernier niveau uniquement
             if (newLevel > initialLevel) {
                 const settingsResult = await pool.query(
@@ -135,7 +139,9 @@ module.exports = {
                 .setTitle(`XP ajouté pour ${target.tag}`)
                 .setColor('#00FFAA')
                 .addFields(
-                    { name: 'Nouveau niveau', value: `${newLevel}`, inline: true }
+                    { name: 'XP reçu', value: `${xpToAdd}`, inline: true },
+                    { name: 'XP total', value: `${newXp}`, inline: true },
+                    { name: 'XP restant pour le niveau suivant', value: `${xpRemaining} / ${xpForNextLevel}`, inline: true }
                 );
 
             // Réponse visible pour tous
