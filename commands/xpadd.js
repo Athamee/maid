@@ -139,9 +139,10 @@ module.exports = {
                 .setTitle(`XP ajouté pour ${target.tag}`)
                 .setColor('#00FFAA')
                 .addFields(
-                    { name: 'XP reçu', value: `${xpToAdd}`, inline: true },
-                    { name: 'XP total', value: `${newXp}`, inline: true },
-                    { name: 'XP restant pour le niveau suivant', value: `${xpRemaining} / ${xpForNextLevel}`, inline: true }
+                    { name: 'XP reçu', value: `${xpToAdd}`, inline: false },
+                    { name: 'XP total', value: `${newXp}`, inline: false },
+                    { name: 'Niveau', value: `${newLevel}`, inline: false },
+                    { name: 'Prochain niveau', value: `${xpRemaining} / ${xpForNextLevel}`, inline: false }
                 );
 
             // Réponse visible pour tous
