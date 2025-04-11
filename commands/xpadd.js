@@ -47,9 +47,10 @@ module.exports = {
         const userId = target.id;
 
         try {
+            // Mise à jour de l’XP, du niveau et de last_message
             const { rows } = await pool.query(
-                'INSERT INTO xp (user_id, guild_id, xp, level) VALUES ($1, $2, $3, $4) ' +
-                'ON CONFLICT (user_id, guild_id) DO UPDATE SET xp = xp.xp + $3, level = xp.level + $4 ' +
+                'INSERT INTO xp (user_id, guild_id, xp, level, last_message) VALUES ($1, $2, $3, $4, NOW()) ' +
+                'ON CONFLICT (user_id, guild_id) DO UPDATE SET xp = xp.xp + $3, level = xp.level + $4, last_message = NOW() ' +
                 'RETURNING xp, level',
                 [userId, guildId, xpToAdd, levelsToAdd]
             );

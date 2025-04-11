@@ -15,7 +15,6 @@ const reactionTriggers = {
     'bravo': '👏',
     'lol': '😂',
     'cool': '😎'
-    // Ajoute d’autres mots-clés et emojis ici selon tes besoins
 };
 
 const levelUpImages = {
@@ -59,6 +58,7 @@ module.exports = (client) => {
         const member = message.member;
         const content = message.content.toLowerCase();
 
+        // Ajout des réactions automatiques
         for (const [trigger, emoji] of Object.entries(reactionTriggers)) {
             if (content.includes(trigger)) {
                 try { await message.react(emoji); } catch (error) { console.error(`Erreur réaction ${emoji} :`, error.stack); }
@@ -77,6 +77,7 @@ module.exports = (client) => {
 
             if (member.roles.cache.some(role => excludedRoles.includes(role.id))) return;
 
+            // Vérification du cooldown (1 minute)
             const lastMessageResult = await pool.query('SELECT last_message FROM xp WHERE user_id = $1 AND guild_id = $2', [userId, guildId]);
             const lastMessage = lastMessageResult.rows[0]?.last_message;
             if (lastMessage && (Date.now() - new Date(lastMessage).getTime()) < 60000) return;
@@ -84,6 +85,7 @@ module.exports = (client) => {
             let xpToAdd = settings.message_xp;
             if (message.attachments.size > 0) xpToAdd += settings.image_xp;
 
+            // Mise à jour de l’XP et de last_message
             const { rows } = await pool.query(
                 'INSERT INTO xp (user_id, guild_id, xp, last_message) VALUES ($1, $2, $3, NOW()) ' +
                 'ON CONFLICT (user_id, guild_id) DO UPDATE SET xp = xp.xp + $3, last_message = NOW() RETURNING xp, level',
@@ -93,6 +95,7 @@ module.exports = (client) => {
             let newXp = rows[0].xp;
             let newLevel = rows[0].level;
 
+            // Gestion des montées de niveau
             while (newXp >= getRequiredXp(newLevel + 1)) {
                 newLevel++;
                 if (newLevel !== rows[0].level) {
@@ -127,15 +130,17 @@ module.exports = (client) => {
 
             if (member.roles.cache.some(role => excludedRoles.includes(role.id))) return;
 
+            // Mise à jour de l’XP et de last_message pour les réactions
             const { rows } = await pool.query(
-                'INSERT INTO xp (user_id, guild_id, xp) VALUES ($1, $2, $3) ' +
-                'ON CONFLICT (user_id, guild_id) DO UPDATE SET xp = xp.xp + $3 RETURNING xp, level',
+                'INSERT INTO xp (user_id, guild_id, xp, last_message) VALUES ($1, $2, $3, NOW()) ' +
+                'ON CONFLICT (user_id, guild_id) DO UPDATE SET xp = xp.xp + $3, last_message = NOW() RETURNING xp, level',
                 [userId, guildId, settings.reaction_xp]
             );
 
             let newXp = rows[0].xp;
             let newLevel = rows[0].level;
 
+            // Gestion des montées de niveau
             while (newXp >= getRequiredXp(newLevel + 1)) {
                 newLevel++;
                 if (newLevel !== rows[0].level) {
@@ -171,21 +176,20 @@ module.exports = (client) => {
             const noCameraChannels = JSON.parse(settings.no_camera_channels);
             const excludedRoles = JSON.parse(settings.excluded_roles);
 
-            // Récupère les paramètres de rôle pour le nouveau canal vocal (s’il y en a un)
+            // Gestion des rôles vocaux
             const newVoiceRoleResult = newState.channel ? await pool.query(
                 'SELECT role_id FROM voice_role_settings WHERE guild_id = $1 AND voice_channel_id = $2',
                 [guildId, newState.channel.id]
             ) : { rows: [] };
             const newVoiceRoleId = newVoiceRoleResult.rows[0]?.role_id;
 
-            // Récupère les paramètres de rôle pour l’ancien canal vocal (s’il y en a un)
             const oldVoiceRoleResult = oldState.channel ? await pool.query(
                 'SELECT role_id FROM voice_role_settings WHERE guild_id = $1 AND voice_channel_id = $2',
                 [guildId, oldState.channel.id]
             ) : { rows: [] };
             const oldVoiceRoleId = oldVoiceRoleResult.rows[0]?.role_id;
 
-            // Désactive la caméra si interdite
+            // Désactivation de la caméra si interdite
             if (newState.channel && noCameraChannels.includes(newState.channel.id) && newState.selfVideo) {
                 await newState.setSelfVideo(false);
             }
@@ -202,15 +206,17 @@ module.exports = (client) => {
                             const memberVoiceState = newState.channel?.members.get(userId);
                             if (!memberVoiceState || memberVoiceState.selfMute || member.roles.cache.some(role => excludedRoles.includes(role.id))) return;
 
+                            // Mise à jour de l’XP et de last_message pour l’activité vocale
                             const { rows } = await pool.query(
-                                'INSERT INTO xp (user_id, guild_id, xp) VALUES ($1, $2, $3) ' +
-                                'ON CONFLICT (user_id, guild_id) DO UPDATE SET xp = xp.xp + $3 RETURNING xp, level',
+                                'INSERT INTO xp (user_id, guild_id, xp, last_message) VALUES ($1, $2, $3, NOW()) ' +
+                                'ON CONFLICT (user_id, guild_id) DO UPDATE SET xp = xp.xp + $3, last_message = NOW() RETURNING xp, level',
                                 [userId, guildId, settings.voice_xp_per_min]
                             );
 
                             let newXp = rows[0].xp;
                             let newLevel = rows[0].level;
 
+                            // Gestion des montées de niveau
                             while (newXp >= getRequiredXp(newLevel + 1)) {
                                 newLevel++;
                                 if (newLevel !== rows[0].level) {
