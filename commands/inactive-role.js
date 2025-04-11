@@ -114,13 +114,19 @@ module.exports = {
             // Envoi du message personnalisé dans le salon spécifié
             if (addedCount > 0 || removedCount > 0) {
                 const messageContent = `
-                    **Mise à jour de l’inactivité :**
-                    - ${addedCount} membres n’ont pas gagné d’XP et ont reçu le rôle <@&${inactiveRole.id}>.
-                    - ${removedCount} membres ont repris de l’XP et ont perdu le rôle.
-                    *Période d’inactivité : ${weeksInactive} semaines.*
+    **Mise à jour de l’inactivité :**
+    - ${addedCount} membres n’ont pas gagné d’XP et ont reçu le rôle <@&${inactiveRole.id}>.
+    - ${removedCount} membres ont repris de l’XP et ont perdu le rôle.
+    *Période d’inactivité : ${weeksInactive} semaines.*
 
-                     * **Si vous êtes dans ce salon c'est que vous êtes inactifs !**\n > *Vous devriez revenir pour participer, sinon la voiture-balai du Donjon vous emmènera prochainement vers la porte.*\n\n***On vous attends, bandes de torturées & torturés du bocal !***\n\n😈
-                `.trim();
+    
+    * **Si vous êtes dans ce salon c'est que vous êtes inactifs !**
+    > *Vous devriez revenir pour participer, sinon la voiture-balai du Donjon vous emmènera prochainement vers la porte.*
+
+    
+    ***On vous attends, bandes de torturées & torturés du bocal !***
+    😈
+`.trim();
                 await targetChannel.send(messageContent);
                 console.log(`Message envoyé dans ${targetChannel.name} (ID: ${targetChannel.id})`);
             } else {
