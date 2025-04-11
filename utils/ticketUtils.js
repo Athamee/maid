@@ -28,7 +28,22 @@ async function createTicketChannel(client, guild, member, ticketType, customMess
         const defaultSupportRole = '1094318706487734483'; // Rôle par défaut pour tous les tickets sauf Partenariat
         const partnershipRole = '1340401306971672626';    // Rôle spécifique pour Partenariat
         const additionalRoles = ticketType === 'Partenariat' ? [partnershipRole] : [defaultSupportRole];
-        const allSupportRoles = [...new Set([...supportRoleIds, ...additionalRoles])]; // Évite les doublons
+
+        // Rôles avec permission Administrator
+        const adminRoleIds = [];
+        for (const [roleId, role] of guild.roles.cache) {
+            if (role.permissions.has(PermissionsBitField.Flags.Administrator)) {
+                adminRoleIds.push(roleId);
+            }
+        }
+        if (adminRoleIds.length === 0) {
+            console.warn('Aucun rôle avec la permission Administrator trouvé dans le serveur.');
+        } else {
+            console.log(`Rôles admins détectés : ${adminRoleIds.join(', ')}`);
+        }
+
+        // Fusion des rôles (MODO + rôles spécifiques + admins)
+        const allSupportRoles = [...new Set([...supportRoleIds, ...additionalRoles, ...adminRoleIds])]; // Évite les doublons
 
         // Création du canal de ticket avec un nom incluant le type
         const ticketChannel = await guild.channels.create({
@@ -61,7 +76,7 @@ async function createTicketChannel(client, guild, member, ticketType, customMess
                         PermissionsBitField.Flags.ManageChannels,
                     ],
                 },
-                ...allSupportRoles.map(roleId => ({ // Rôles de support (MODO + rôles spécifiques)
+                ...allSupportRoles.map(roleId => ({ // Rôles de support (MODO + rôles spécifiques + admins)
                     id: roleId,
                     allow: [
                         PermissionsBitField.Flags.ViewChannel,
@@ -83,9 +98,14 @@ async function createTicketChannel(client, guild, member, ticketType, customMess
             .setStyle(ButtonStyle.Danger);
         const row = new ActionRowBuilder().addComponents(closeButton);
 
+        // Construction du contenu avec ping des admins
+        const adminMentions = adminRoleIds.map(roleId => `<@&${roleId}>`).join(' ');
+        const baseContent = customMessageOptions?.content || `Bonjour ${member}, votre ticket a été ouvert pour "${ticketType}".`;
+        const finalContent = `${baseContent} ${adminMentions}`.trim();
+
         // Envoi du message initial dans le ticket
         await ticketChannel.send({
-            content: customMessageOptions?.content || `Bonjour ${member}, votre ticket a été ouvert pour "${ticketType}".`,
+            content: finalContent,
             embeds: customMessageOptions?.embeds || [],
             components: customMessageOptions?.components || [row], // Bouton par défaut si aucun composant personnalisé
         });
