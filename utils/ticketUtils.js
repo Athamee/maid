@@ -1,3 +1,4 @@
+// ticketUtils.js
 const { ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, PermissionsBitField } = require('discord.js');
 const fs = require('fs').promises;
 const path = require('path');
@@ -8,6 +9,12 @@ async function createTicketChannel(client, guild, member, ticketType, customMess
         const categoryId = process.env.TICKET_CATEGORY_ID;
         if (!categoryId) {
             throw new Error("L'ID de la catégorie des tickets (TICKET_CATEGORY_ID) n'est pas défini dans les variables d'environnement.");
+        }
+
+        // Vérifier que ticketType est une string
+        if (typeof ticketType !== 'string') {
+            console.error(`ticketType n'est pas une string : ${JSON.stringify(ticketType)}`);
+            throw new Error('ticketType doit être une chaîne de caractères');
         }
 
         console.log(`Création d’un ticket pour ${member.user.tag} dans la catégorie ${categoryId} (Type: ${ticketType})`);

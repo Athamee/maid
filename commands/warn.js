@@ -85,8 +85,8 @@ module.exports = {
                             ? interaction.guild.roles.cache.get(process.env.DICKTATEUR_ROLE_ID)
                             : null;
 
-                        const gaystapoMention = gaystapoRole ? `<@&${gaystapoRole.id}>` : '@gaystapo';
-                        const dicktateurMention = dicktateurRole ? `<@&${dicktateurRole.id}>` : '@dicktateur';
+                        const gaystapoMention = gaystapoRole ? `<@&${gaystapoRole.id}>` : '@1094318706487734483';
+                        const dicktateurMention = dicktateurRole ? `<@&${dicktateurRole.id}>` : '@1094318706525470901';
 
                         const warnMessage = `<@${target.id}>, tu viens de te faire warn pour la troisième fois. Le dernier warn était pour ${reason}.\nUn ${gaystapoMention} ou ${dicktateurMention} viendra bientôt s'occuper de ton cas.`;
 
