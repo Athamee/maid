@@ -1,6 +1,6 @@
 // unwarn.js
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { PermissionFlagsBits, InteractionResponseFlags } = require('discord.js');
+const { PermissionFlagsBits } = require('discord.js');
 const pool = require('../db');
 
 module.exports = {
@@ -17,7 +17,7 @@ module.exports = {
 
         // Vérifier les permissions
         if (!isAdmin && !hasModoRole) {
-            return interaction.reply({ content: 'Permission refusée.', flags: InteractionResponseFlags.Ephemeral });
+            return interaction.reply({ content: 'Permission refusée.', ephemeral: true });
         }
 
         const targetUser = interaction.options.getUser('user');
@@ -35,7 +35,7 @@ module.exports = {
                     [targetUser.id, interaction.guild.id]
                 );
                 if (result.rowCount === 0) {
-                    return interaction.reply({ content: `Aucun warn trouvé pour <@${targetUser.id}>.`, flags: InteractionResponseFlags.Ephemeral });
+                    return interaction.reply({ content: `Aucun warn trouvé pour <@${targetUser.id}>.`, ephemeral: true });
                 }
                 messageContent = `Tous les warns (${result.rowCount}) retirés pour <@${targetUser.id}>.`;
             } else {
@@ -45,7 +45,7 @@ module.exports = {
                     [targetUser.id, interaction.guild.id]
                 );
                 if (result.rowCount === 0) {
-                    return interaction.reply({ content: `Aucun warn trouvé pour <@${targetUser.id}>.`, flags: InteractionResponseFlags.Ephemeral });
+                    return interaction.reply({ content: `Aucun warn trouvé pour <@${targetUser.id}>.`, ephemeral: true });
                 }
                 const warn = result.rows[0];
                 messageContent = `Warn retiré pour <@${warn.user_id}> (Raison : ${warn.reason}).`;
@@ -54,7 +54,7 @@ module.exports = {
             if (!targetMember) {
                 await interaction.reply({
                     content: `${messageContent} Membre introuvable sur le serveur.`,
-                    flags: InteractionResponseFlags.Ephemeral
+                    ephemeral: true
                 });
                 console.log(`${reset ? 'Tous les warns' : 'Warn'} retirés par ${interaction.user.tag} pour ${targetUser.id}`);
                 return;
@@ -76,7 +76,7 @@ module.exports = {
                     console.error(`Erreur : Le rôle WARNED_ROLE_ID (${warnedRoleId}) est introuvable.`);
                     await interaction.reply({
                         content: `${messageContent} Attention : le rôle Warned est introuvable.`,
-                        flags: InteractionResponseFlags.Ephemeral
+                        ephemeral: true
                     });
                     return;
                 }
@@ -85,19 +85,19 @@ module.exports = {
                 await targetMember.roles.remove(warnedRole);
                 await interaction.reply({
                     content: `${messageContent} Rôle ${warnedRole.name} retiré (${warnCount}/3).`,
-                    flags: InteractionResponseFlags.Ephemeral
+                    ephemeral: true
                 });
             } else {
                 await interaction.reply({
                     content: `${messageContent} ${warnCount}/3 warns restants.`,
-                    flags: InteractionResponseFlags.Ephemeral
+                    ephemeral: true
                 });
             }
 
             console.log(`${reset ? 'Tous les warns' : 'Warn'} retirés par ${interaction.user.tag} pour ${targetUser.id}`);
         } catch (error) {
             console.error('Erreur lors du unwarn :', error.message, error.stack);
-            await interaction.reply({ content: 'Erreur lors du retrait du warn.', flags: InteractionResponseFlags.Ephemeral });
+            await interaction.reply({ content: 'Erreur lors du retrait du warn.', ephemeral: true });
         }
     }
 };
