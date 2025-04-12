@@ -22,8 +22,8 @@ module.exports = {
             await interaction.deferReply({ ephemeral: true });
 
             // Définir le chemin vers l'image locale
-            const imagePath = path.join(__dirname, '../img/vanilla.png');
-            const attachment = new AttachmentBuilder(imagePath).setName('vanilla.png');
+            const imagePath = path.join(__dirname, '../img/role-experience.vanilla.png');
+            const attachment = new AttachmentBuilder(imagePath).setName('role-experience.vanilla.png');
 
             // Envoyer d'abord l'image
             await interaction.channel.send({

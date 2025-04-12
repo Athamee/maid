@@ -22,8 +22,8 @@ module.exports = {
             await interaction.deferReply({ ephemeral: true });
 
             // Définir le chemin vers l'image locale
-            const imagePath = path.join(__dirname, '../img/orientation.png');
-            const attachment = new AttachmentBuilder(imagePath).setName('orientation.png');
+            const imagePath = path.join(__dirname, '../img/role-orientation.png');
+            const attachment = new AttachmentBuilder(imagePath).setName('role-orientation.png');
 
             // Envoyer d'abord l'image
             await interaction.channel.send({
@@ -92,53 +92,38 @@ module.exports = {
         // Différer la réponse immédiatement pour éviter les timeouts
         await interaction.deferReply({ ephemeral: true });
 
-        // Liste des rôles d’orientation
-        const orientationRoles = [
-            process.env.HETERO_ROLE_ID,
-            process.env.HOMO_ROLE_ID,
-            process.env.BI_ROLE_ID,
-            process.env.PAN_ROLE_ID,
-            process.env.SAPIO_ROLE_ID,
-            process.env.ASEXUEL_ROLE_ID,
-            process.env.ORIENTATION_ROLE_ID
-        ];
-
-        const existingOrientationRole = interaction.member.roles.cache.find(r => orientationRoles.includes(r.id));
-
         try {
-            // Retirer le rôle d’orientation existant s’il y en a un
-            if (existingOrientationRole) {
-                console.log(`Retrait du rôle existant : ${existingOrientationRole.name} (${existingOrientationRole.id})`);
-                await interaction.member.roles.remove(existingOrientationRole);
+            // Vérifier si l’utilisateur a déjà le rôle
+            if (interaction.member.roles.cache.has(roleId)) {
+                console.log(`L’utilisateur a déjà le rôle : ${role.name} (${role.id})`);
                 await interaction.editReply({
-                    content: `Votre rôle précédent (${existingOrientationRole.name}) a été retiré.`
-                });
-            } else {
-                console.log('Aucun rôle d’orientation existant trouvé.');
-                await interaction.editReply({
-                    content: 'Aucun rôle d’orientation précédent à retirer.'
-                });
-            }
-
-            // Ajouter le nouveau rôle
-            console.log(`Ajout du rôle : ${role.name} (${role.id})`);
-            await interaction.member.roles.add(role);
-            await interaction.followUp({
-                content: `Vous avez maintenant le rôle : ${role.name}.`,
-                ephemeral: true
-            });
-        } catch (error) {
-            console.error('Erreur lors de la gestion des rôles :', error.message, error.stack);
-            if (interaction.replied) {
-                await interaction.followUp({
-                    content: 'Une erreur est survenue lors de la modification de vos rôles.',
+                    content: `Vous avez déjà le rôle : ${role.name}.`,
                     ephemeral: true
                 });
-            } else {
+                // Option toggle (décommenter si tu veux permettre de retirer le rôle) :
+                /*
+                console.log(`Retrait du rôle : ${role.name} (${role.id})`);
+                await interaction.member.roles.remove(role);
                 await interaction.editReply({
-                    content: 'Une erreur est survenue lors de la modification de vos rôles.'
+                    content: `Le rôle ${role.name} a été retiré.`,
+                    ephemeral: true
+                });
+                */
+            } else {
+                // Ajouter le nouveau rôle
+                console.log(`Ajout du rôle : ${role.name} (${role.id})`);
+                await interaction.member.roles.add(role);
+                await interaction.editReply({
+                    content: `Vous avez maintenant le rôle : ${role.name}.`,
+                    ephemeral: true
                 });
             }
+        } catch (error) {
+            console.error('Erreur lors de la gestion des rôles :', error.message, error.stack);
+            await interaction.editReply({
+                content: 'Une erreur est survenue lors de la modification de vos rôles.',
+                ephemeral: true
+            });
         }
     }
 };
