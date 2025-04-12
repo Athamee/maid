@@ -15,10 +15,16 @@ const levelUpImages = {
 const defaultImage = path.join(__dirname, '../img/default.png');
 
 const getLevelUpImage = (level) => {
-    const levels = Object.keys(levelUpImages).map(Number).sort((a, b) => b - a);
-    for (const l of levels) {
-        if (level >= l) return levelUpImages[l];
+    if (!level || level < 1) {
+        console.warn(`Niveau invalide : ${level}, utilisation de l'image par défaut`);
+        return defaultImage;
     }
+    const image = levelUpImages[level];
+    if (image) {
+        console.log(`Niveau ${level} exact, image sélectionnée : ${image}`);
+        return image;
+    }
+    console.log(`Niveau ${level} sans image spécifique, image par défaut : ${defaultImage}`);
     return defaultImage;
 };
 
@@ -107,6 +113,8 @@ module.exports = {
                     [newLevel, userId, guildId]
                 );
             }
+
+            console.log(`XP ajouté pour ${target.tag} : XP=${newXp}, Niveau=${newLevel}`);
 
             // Calculer l’XP restant pour le prochain niveau
             const xpForNextLevel = getRequiredXp(newLevel + 1);

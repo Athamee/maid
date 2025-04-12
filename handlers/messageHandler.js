@@ -25,12 +25,16 @@ const levelUpImages = {
 const defaultImage = path.join(__dirname, '../img/default.png');
 
 const getLevelUpImage = (level) => {
-    // Retourne une image spécifique uniquement si le niveau correspond exactement
-    if (levelUpImages[level]) {
-        console.log(`Image spécifique utilisée pour le niveau ${level}: ${levelUpImages[level]}`);
-        return levelUpImages[level];
+    if (!level || level < 1) {
+        console.warn(`Niveau invalide : ${level}, utilisation de l'image par défaut`);
+        return defaultImage;
     }
-    console.log(`Image par défaut utilisée pour le niveau ${level}: ${defaultImage}`);
+    const image = levelUpImages[level];
+    if (image) {
+        console.log(`Niveau ${level} exact, image sélectionnée : ${image}`);
+        return image;
+    }
+    console.log(`Niveau ${level} sans image spécifique, image par défaut : ${defaultImage}`);
     return defaultImage;
 };
 
@@ -95,7 +99,7 @@ module.exports = (client) => {
             );
 
             let newXp = rows[0].xp;
-            let newLevel = rows[0].level;
+            let newLevel = rows[0].level || 1;
 
             // Gestion des montées de niveau
             while (newXp >= getRequiredXp(newLevel + 1)) {
@@ -140,7 +144,7 @@ module.exports = (client) => {
             );
 
             let newXp = rows[0].xp;
-            let newLevel = rows[0].level;
+            let newLevel = rows[0].level || 1;
 
             // Gestion des montées de niveau
             while (newXp >= getRequiredXp(newLevel + 1)) {
@@ -216,7 +220,7 @@ module.exports = (client) => {
                             );
 
                             let newXp = rows[0].xp;
-                            let newLevel = rows[0].level;
+                            let newLevel = rows[0].level || 1;
 
                             // Gestion des montées de niveau
                             while (newXp >= getRequiredXp(newLevel + 1)) {
@@ -226,7 +230,7 @@ module.exports = (client) => {
                                     if (settings.level_up_channel) {
                                         const channel = client.channels.cache.get(settings.level_up_channel);
                                         if (channel) {
-                                            const messageTemplate = await getLevelUpMessage(guildId, newLevel);
+                                            const messageTemplate = await getLevelUpMessage(guid, newLevel);
                                             const formattedMessage = messageTemplate.replace('{user}', `<@${userId}>`);
                                             const imagePath = getLevelUpImage(newLevel);
                                             await channel.send({ content: formattedMessage, files: [imagePath] });
