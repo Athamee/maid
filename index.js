@@ -115,6 +115,14 @@ async function initDatabase() {
             )
         `);
         await pool.query(`
+            CREATE TABLE IF NOT EXISTS warn_removed_roles (
+                guild_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                removed_roles TEXT DEFAULT '[]',
+                PRIMARY KEY (guild_id, user_id)
+            )
+        `);
+        await pool.query(`
             CREATE TABLE IF NOT EXISTS xp (
                 user_id TEXT NOT NULL,
                 guild_id TEXT NOT NULL,

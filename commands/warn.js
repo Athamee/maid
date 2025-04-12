@@ -27,10 +27,10 @@ module.exports = {
         const reason = interaction.options.getString('reason') || 'Non spécifié';
 
         try {
-            // Insérer le warn dans la DB
+            // Insérer le warn dans la DB (sans timestamp, CURRENT_TIMESTAMP s’en charge)
             await pool.query(
-                'INSERT INTO warns (user_id, guild_id, reason, moderator_id, timestamp) VALUES ($1, $2, $3, $4, $5)',
-                [target.id, interaction.guild.id, reason, interaction.user.id, Math.floor(Date.now() / 1000)]
+                'INSERT INTO warns (user_id, guild_id, reason, moderator_id) VALUES ($1, $2, $3, $4)',
+                [target.id, interaction.guild.id, reason, interaction.user.id]
             );
             console.log(`[Warn] Warn pour ${target.tag} par ${interaction.user.tag} (raison : ${reason})`);
 

@@ -50,15 +50,6 @@ module.exports = {
                 messageContent = `Warn retiré pour <@${warn.user_id}> (Raison : ${warn.reason}).`;
             }
 
-            if (!targetMember) {
-                await interaction.reply({
-                    content: `${messageContent} Membre introuvable sur le serveur.`,
-                    ephemeral: true
-                });
-                console.log(`[Unwarn] ${reset ? 'Tous les warns' : 'Warn'} retirés par ${interaction.user.tag} pour ${targetUser.id}`);
-                return;
-            }
-
             // Compter les warns restants
             const warnCountResult = await pool.query(
                 'SELECT COUNT(*) AS count FROM warns WHERE user_id = $1 AND guild_id = $2',
@@ -69,56 +60,62 @@ module.exports = {
             // Actions pour le rôle et restauration
             let actions = [reset ? 'tous les warns retirés' : 'warn retiré'];
 
-            // Vérifier si le rôle WARNED_ROLE_ID doit être retiré
-            const warnedRoleId = process.env.WARNED_ROLE_ID;
-            const warnedRole = interaction.guild.roles.cache.get(warnedRoleId);
-
             if (warnCount < 3) {
-                // Retirer le rôle Warned
-                if (warnedRole && targetMember.roles.cache.has(warnedRoleId)) {
-                    await targetMember.roles.remove(warnedRole);
-                    actions.push(`rôle ${warnedRole.name} retiré`);
-                    console.log(`[Unwarn] Retrait du rôle ${warnedRole.name} (${warnedRoleId}) pour ${targetMember.user.tag} (${targetUser.id}) : ${warnCount} warns restants`);
-                } else if (!warnedRole) {
-                    console.error(`[Unwarn] Erreur : Le rôle WARNED_ROLE_ID (${warnedRoleId}) est introuvable.`);
-                }
+                try {
+                    // Retirer le rôle Warned si membre présent
+                    if (targetMember) {
+                        const warnedRoleId = process.env.WARNED_ROLE_ID;
+                        const warnedRole = interaction.guild.roles.cache.get(warnedRoleId);
 
-                // Restaurer les rôles depuis warn_removed_roles
-                const rolesResult = await pool.query(
-                    'SELECT removed_roles FROM warn_removed_roles WHERE guild_id = $1 AND user_id = $2',
-                    [interaction.guild.id, targetUser.id]
-                );
-                const removedRoles = rolesResult.rows[0] ? JSON.parse(rolesResult.rows[0].removed_roles) : [];
+                        if (warnedRole && targetMember.roles.cache.has(warnedRoleId)) {
+                            await targetMember.roles.remove(warnedRole);
+                            actions.push(`rôle ${warnedRole.name} retiré`);
+                            console.log(`[Unwarn] Retrait du rôle ${warnedRole.name} (${warnedRoleId}) pour ${targetMember.user.tag} (${targetUser.id}) : ${warnCount} warns restants`);
+                        } else if (!warnedRole) {
+                            console.error(`[Unwarn] Erreur : Le rôle WARNED_ROLE_ID (${warnedRoleId}) est introuvable.`);
+                        }
 
-                if (removedRoles.length > 0) {
-                    const rolesToRestore = [
-                        { id: process.env.CERTIFIE_ROLE_ID, name: 'Certifié' },
-                        { id: process.env.DM_ROLE_ID, name: 'DM' },
-                        { id: process.env.GALERIE_ROLE_ID, name: 'Galerie' },
-                        { id: process.env.TORTURE_ROLE_ID, name: 'Torture' },
-                        { id: process.env.MEMBRE_ROLE_ID, name: 'Membre' }
-                    ];
+                        // Restaurer les rôles depuis warn_removed_roles
+                        const rolesResult = await pool.query(
+                            'SELECT removed_roles FROM warn_removed_roles WHERE guild_id = $1 AND user_id = $2',
+                            [interaction.guild.id, targetUser.id]
+                        );
+                        const removedRoles = rolesResult.rows[0] ? JSON.parse(rolesResult.rows[0].removed_roles) : [];
 
-                    for (const role of rolesToRestore) {
-                        if (removedRoles.includes(role.id)) {
-                            const roleObj = role.id && interaction.guild.roles.cache.get(role.id);
-                            if (roleObj && !targetMember.roles.cache.has(role.id)) {
-                                await targetMember.roles.add(roleObj);
-                                actions.push(`rôle ${roleObj.name} restauré`);
-                                console.log(`[Unwarn] Restauration du rôle ${roleObj.name} (${role.id}) pour ${targetMember.user.tag} (${targetUser.id})`);
-                            } else if (role.id && !roleObj) {
-                                console.error(`[Unwarn] Erreur : Le rôle ${role.name} (${role.id}) est introuvable.`);
+                        if (removedRoles.length > 0) {
+                            const rolesToRestore = [
+                                { id: process.env.CERTIFIE_ROLE_ID, name: 'Certifié' },
+                                { id: process.env.DM_ROLE_ID, name: 'DM' },
+                                { id: process.env.GALERIE_ROLE_ID, name: 'Galerie' },
+                                { id: process.env.TORTURE_ROLE_ID, name: 'Torture' },
+                                { id: process.env.MEMBRE_ROLE_ID, name: 'Membre' }
+                            ];
+
+                            for (const role of rolesToRestore) {
+                                if (removedRoles.includes(role.id)) {
+                                    const roleObj = role.id && interaction.guild.roles.cache.get(role.id);
+                                    if (roleObj && !targetMember.roles.cache.has(role.id)) {
+                                        await targetMember.roles.add(roleObj);
+                                        actions.push(`rôle ${roleObj.name} restauré`);
+                                        console.log(`[Unwarn] Restauration du rôle ${roleObj.name} (${role.id}) pour ${targetMember.user.tag} (${targetUser.id})`);
+                                    } else if (role.id && !roleObj) {
+                                        console.error(`[Unwarn] Erreur : Le rôle ${role.name} (${role.id}) est introuvable.`);
+                                    }
+                                }
                             }
                         }
                     }
-                }
 
-                // Supprimer l’entrée de warn_removed_roles
-                await pool.query(
-                    'DELETE FROM warn_removed_roles WHERE guild_id = $1 AND user_id = $2',
-                    [interaction.guild.id, targetUser.id]
-                );
-                console.log(`[Unwarn] Entrée warn_removed_roles supprimée pour ${targetUser.tag}`);
+                    // Supprimer l’entrée de warn_removed_roles (même si membre absent)
+                    await pool.query(
+                        'DELETE FROM warn_removed_roles WHERE guild_id = $1 AND user_id = $2',
+                        [interaction.guild.id, targetUser.id]
+                    );
+                    console.log(`[Unwarn] Entrée warn_removed_roles supprimée pour ${targetUser.tag}`);
+                } catch (error) {
+                    console.error('[Unwarn] Erreur lors de la gestion des rôles :', error.message, error.stack);
+                    actions.push('erreur lors de la gestion des rôles');
+                }
             }
 
             // Envoyer le message dans PILORI_CHANNEL_ID
@@ -130,7 +127,7 @@ module.exports = {
                 await piloriChannel.send(piloriMessage);
                 console.log(`[Unwarn] Message envoyé dans #${piloriChannel.name} : ${piloriMessage}`);
             } else {
-                console.error(`[Unwarn] Erreur : Salon PILORI_CHANNEL_ID (${piloriChannelId}) introuvable ou non texte.`);
+                console.error(`[Unwarn] Erreur : Salon PILORI_CHANNEL_ID (${piloriChannelId}) introuvable, non texte ou non configuré.`);
             }
 
             await interaction.reply({
