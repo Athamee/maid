@@ -34,7 +34,7 @@ module.exports = {
             const button = new ButtonBuilder()
                 .setCustomId(`membre_${process.env.MEMBRE_ROLE_ID}`)
                 .setLabel('Devenir membre')
-                .setEmoji('<:membre:1340038116074262540>')
+                .setEmoji('<:donjon_membre:1340094188670161037> ')
                 .setStyle(ButtonStyle.Secondary);
 
             // Ajouter le bouton dans une ligne d'action
