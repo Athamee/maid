@@ -67,7 +67,7 @@ async function loadEvents() {
     const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
 
     for (const file of eventFiles) {
-        const filePath = path.join(eventsPath, file);
+        const filePath = path.join(eventsPath, file); // Corrigé : eventsPath
         try {
             const event = require(filePath);
             if (event.once) {
@@ -340,7 +340,7 @@ async function startBot() {
     try {
         await initDatabase();
         await loadCommands();
-        await loadEvents(); // Ajout du chargement des événements
+        await loadEvents();
         await deployCommands();
         await client.login(process.env.TOKEN);
     } catch (error) {

@@ -41,7 +41,19 @@ module.exports = {
             );
             const warnCount = parseInt(warnCountResult.rows[0].count, 10);
 
-            // Vérifier si 3 warns pour attribuer le rôle et envoyer le message
+            // Envoyer le message dans le salon PILORI_CHANNEL_ID pour chaque warn
+            const piloriChannelId = process.env.PILORI_CHANNEL_ID;
+            const piloriChannel = interaction.guild.channels.cache.get(piloriChannelId);
+
+            if (piloriChannel && piloriChannel.isTextBased()) {
+                const piloriMessage = `Le membre <@${target.id}> a reçu un warn pour la raison suivante : ${reason}.`;
+                await piloriChannel.send(piloriMessage);
+                console.log(`Message envoyé dans #${piloriChannel.name} : ${piloriMessage}`);
+            } else {
+                console.error(`Erreur : Salon PILORI_CHANNEL_ID (${piloriChannelId}) introuvable ou non texte.`);
+            }
+
+            // Vérifier si 3 warns pour attribuer le rôle et envoyer le message dans WARN_CHANNEL_ID
             if (warnCount >= 3) {
                 const warnedRoleId = process.env.WARNED_ROLE_ID;
                 const warnedRole = interaction.guild.roles.cache.get(warnedRoleId);
@@ -60,7 +72,7 @@ module.exports = {
                     console.log(`Ajout du rôle ${warnedRole.name} (${warnedRoleId}) à ${target.tag} (${target.id}) pour 3 warns`);
                     await targetMember.roles.add(warnedRole);
 
-                    // Envoyer le message personnalisé dans le salon spécifique
+                    // Envoyer le message personnalisé dans WARN_CHANNEL_ID
                     const warnChannelId = process.env.WARN_CHANNEL_ID;
                     const warnChannel = interaction.guild.channels.cache.get(warnChannelId);
 
