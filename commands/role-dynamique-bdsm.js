@@ -23,7 +23,7 @@ module.exports = {
 
             // Définir le chemin vers l'image locale
             const imagePath = path.join(__dirname, '../img/role-dynamique-bdsm.png');
-            const attachment = new AttachmentBuilder(imagePath).setName('role-dynamique.bdsm.png');
+            const attachment = new AttachmentBuilder(imagePath).setName('role-dynamique-bdsm.png');
 
             // Envoyer d'abord l'image
             await interaction.channel.send({
@@ -81,7 +81,7 @@ module.exports = {
 
         // Extraire roleId (avant le dernier underscore)
         const parts = customId.split('_');
-        const roleId = parts[1]; // roleId est avant l’index
+        const roleId = parts[1];
         const role = interaction.guild.roles.cache.get(roleId);
         if (!role) {
             return interaction.reply({
@@ -93,54 +93,38 @@ module.exports = {
         // Différer la réponse immédiatement pour éviter les timeouts
         await interaction.deferReply({ ephemeral: true });
 
-        // Liste des rôles de dynamique BDSM
-        const bdsmRoles = [
-            process.env.DS_ROLE_ID,
-            process.env.ME_ROLE_ID,
-            process.env.CONTRAT_ROLE_ID,
-            process.env.COLLIER_ROLE_ID,
-            process.env.MENTOR_ROLE_ID,
-            process.env.MENTORAT_ROLE_ID,
-            process.env.PROTECTION_ROLE_ID,
-            process.env.PROTECTORAT_ROLE_ID
-        ];
-
-        const existingBdsmRole = interaction.member.roles.cache.find(r => bdsmRoles.includes(r.id));
-
         try {
-            // Retirer le rôle de dynamique BDSM existant s’il y en a un
-            if (existingBdsmRole) {
-                console.log(`Retrait du rôle existant : ${existingBdsmRole.name} (${existingBdsmRole.id})`);
-                await interaction.member.roles.remove(existingBdsmRole);
+            // Vérifier si l’utilisateur a déjà le rôle
+            if (interaction.member.roles.cache.has(roleId)) {
+                console.log(`L’utilisateur a déjà le rôle : ${role.name} (${role.id})`);
                 await interaction.editReply({
-                    content: `Votre rôle précédent (${existingBdsmRole.name}) a été retiré.`
-                });
-            } else {
-                console.log('Aucun rôle de dynamique BDSM existant trouvé.');
-                await interaction.editReply({
-                    content: 'Aucun rôle de dynamique BDSM précédent à retirer.'
-                });
-            }
-
-            // Ajouter le nouveau rôle
-            console.log(`Ajout du rôle : ${role.name} (${role.id})`);
-            await interaction.member.roles.add(role);
-            await interaction.followUp({
-                content: `Vous avez maintenant le rôle : ${role.name}.`,
-                ephemeral: true
-            });
-        } catch (error) {
-            console.error('Erreur lors de la gestion des rôles :', error.message, error.stack);
-            if (interaction.replied) {
-                await interaction.followUp({
-                    content: 'Une erreur est survenue lors de la modification de vos rôles.',
+                    content: `Vous avez déjà le rôle : ${role.name}.`,
                     ephemeral: true
                 });
-            } else {
+                // Option toggle (décommenter pour permettre de retirer le rôle) :
+                /*
+                console.log(`Retrait du rôle : ${role.name} (${role.id})`);
+                await interaction.member.roles.remove(role);
                 await interaction.editReply({
-                    content: 'Une erreur est survenue lors de la modification de vos rôles.'
+                    content: `Le rôle ${role.name} a été retiré.`,
+                    ephemeral: true
+                });
+                */
+            } else {
+                // Ajouter le nouveau rôle
+                console.log(`Ajout du rôle : ${role.name} (${role.id})`);
+                await interaction.member.roles.add(role);
+                await interaction.editReply({
+                    content: `Vous avez maintenant le rôle : ${role.name}.`,
+                    ephemeral: true
                 });
             }
+        } catch (error) {
+            console.error('Erreur lors de la gestion des rôles :', error.message, error.stack);
+            await interaction.editReply({
+                content: 'Une erreur est survenue lors de la modification de vos rôles.',
+                ephemeral: true
+            });
         }
     }
 };
