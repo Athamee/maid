@@ -1,134 +1,202 @@
-// events/antiSpam.js
-const { EmbedBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
+// Importer les modules nécessaires
+const { Client } = require('discord.js');
 const pool = require('../db');
 
-// Cache des messages par utilisateur
-const messageCache = new Map();
-
+// Définir l’événement messageCreate pour le filtre anti-spam
 module.exports = {
-    name: 'ready',
-    once: true,
-    async execute(client) {
-        console.log('[AntiSpam] Initialisation du filtre anti-spam');
+    name: 'messageCreate',
+    async execute(message) {
+        // Ignorer les messages des bots ou hors guildes
+        if (message.author.bot || !message.guild) return;
 
-        client.on('messageCreate', async message => {
-            if (!message.guild || message.author.bot || message.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                return; // Ignorer bots et admins
+        const guildId = message.guild.id;
+        const userId = message.author.id;
+        const logChannelId = process.env.LOG_MESSAGES_ID;
+        const piloriChannelId = process.env.PILORI_CHANNEL_ID;
+
+        try {
+            // Récupérer les paramètres anti-spam depuis la base
+            const settingsResult = await pool.query(
+                'SELECT spam_settings FROM xp_settings WHERE guild_id = $1',
+                [guildId]
+            );
+
+            // Utiliser des valeurs par défaut si spam_settings est absent
+            const spamSettings = settingsResult.rows[0]?.spam_settings
+                ? JSON.parse(settingsResult.rows[0].spam_settings)
+                : {
+                    message_limit: 5,
+                    time_window: 10000, // 10 secondes
+                    repeat_limit: 3,
+                    mention_limit: 5,
+                    action: 'warn'
+                };
+
+            // Vérifier si le filtre est configuré
+            if (!spamSettings.message_limit || spamSettings.message_limit <= 0) {
+                console.log(`[AntiSpam] Filtre désactivé pour guild ${guildId} (message_limit non défini ou 0).`);
+                return;
             }
 
-            const guildId = message.guild.id;
-            const userId = message.author.id;
-            const now = Date.now();
-
-            // Récupérer config spam
-            const result = await pool.query('SELECT spam_settings FROM xp_settings WHERE guild_id = $1', [guildId]);
-            const settings = result.rows[0]?.spam_settings ? JSON.parse(result.spam_settings) : {
-                message_limit: 5, // 5 messages
-                time_window: 5000, // 5 secondes
-                repeat_limit: 3, // 3 messages identiques
-                mention_limit: 5, // 5 mentions max
-                action: 'warn' // Warn par défaut
+            // Initialiser le cache pour suivre les messages
+            if (!message.client.spamCache) message.client.spamCache = new Map();
+            const userCache = message.client.spamCache.get(userId) || {
+                messages: [],
+                lastContent: '',
+                repeatCount: 0
             };
 
+            // Vérifier le nombre de mentions
+            const mentionCount = message.mentions.users.size + message.mentions.roles.size;
+            if (mentionCount > spamSettings.mention_limit) {
+                await applyAction(message, spamSettings.action, 'Trop de mentions', logChannelId, piloriChannelId);
+                return;
+            }
+
+            // Vérifier les messages répétés
+            if (message.content === userCache.lastContent && message.content.trim() !== '') {
+                userCache.repeatCount += 1;
+                if (userCache.repeatCount >= spamSettings.repeat_limit) {
+                    await applyAction(message, spamSettings.action, 'Messages répétés', logChannelId, piloriChannelId);
+                    return;
+                }
+            } else {
+                userCache.repeatCount = 1;
+            }
+            userCache.lastContent = message.content;
+
+            // Ajouter le message au cache avec timestamp
+            const now = Date.now();
+            userCache.messages.push(now);
+            userCache.messages = userCache.messages.filter(t => now - t < spamSettings.time_window);
+
+            // Vérifier si trop de messages dans la fenêtre temporelle
+            if (userCache.messages.length > spamSettings.message_limit) {
+                await applyAction(message, spamSettings.action, 'Trop de messages', logChannelId, piloriChannelId);
+                return;
+            }
+
             // Mettre à jour le cache
-            if (!messageCache.has(userId)) {
-                messageCache.set(userId, []);
+            message.client.spamCache.set(userId, userCache);
+        } catch (error) {
+            // Loguer les erreurs dans LOG_MESSAGES_ID
+            console.error('[AntiSpam] Erreur :', error.message, error.stack);
+            const logChannel = message.client.channels.cache.get(logChannelId);
+            if (logChannel && logChannel.isTextBased()) {
+                await logChannel.send(`[AntiSpam] Erreur : ${error.message}`);
             }
-            const userMessages = messageCache.get(userId);
-            userMessages.push({ content: message.content, timestamp: now, mentions: message.mentions.users.size });
-            // Nettoyer les vieux messages
-            while (userMessages.length > 0 && now - userMessages[0].timestamp > settings.time_window) {
-                userMessages.shift();
-            }
-
-            // Vérifier spam
-            let isSpam = false;
-            let reason = '';
-
-            // 1. Trop de messages
-            if (userMessages.length >= settings.message_limit) {
-                isSpam = true;
-                reason = `Trop de messages (${userMessages.length} en ${settings.time_window / 1000}s)`;
-            }
-
-            // 2. Messages répétés
-            const contentCounts = {};
-            for (const msg of userMessages) {
-                contentCounts[msg.content] = (contentCounts[msg.content] || 0) + 1;
-                if (contentCounts[msg.content] >= settings.repeat_limit) {
-                    isSpam = true;
-                    reason = `Message répété ${contentCounts[msg.content]} fois`;
-                    break;
-                }
-            }
-
-            // 3. Trop de mentions
-            for (const msg of userMessages) {
-                if (msg.mentions >= settings.mention_limit) {
-                    isSpam = true;
-                    reason = `Trop de mentions (${msg.mentions}) dans un message`;
-                    break;
-                }
-            }
-
-            if (!isSpam) return;
-
-            console.log(`[AntiSpam] Spam détecté par ${message.author.tag} : ${reason}`);
-
-            try {
-                // Ajouter un warn (comme /warn)
-                await pool.query(
-                    'INSERT INTO warns (guild_id, user_id, reason, moderator_id, timestamp) VALUES ($1, $2, $3, $4, $5)',
-                    [guildId, userId, `Spam : ${reason}`, client.user.id, now]
-                );
-
-                // DM au membre
-                await message.author.send({
-                    content: `🚫 Attention, ${message.author}, tu as reçu un **avertissement** sur ${message.guild.name} pour : ${reason}. Évite de spammer pour rester dans le Donjon ! 😈 Contacte un modérateur si besoin.`
-                }).catch(err => {
-                    console.warn(`[AntiSpam] Impossible d'envoyer DM à ${message.author.tag} :`, err.message);
-                });
-
-                // Loguer dans logs-messages
-                const logGuildId = process.env.TICKET_LOG_GUILD_ID;
-                const logMessagesId = process.env.LOG_MESSAGES_ID;
-                if (logGuildId && logMessagesId) {
-                    const logGuild = client.guilds.cache.get(logGuildId);
-                    const logChannel = logGuild?.channels.cache.get(logMessagesId);
-                    if (!logGuild) {
-                        console.error(`[AntiSpam] Serveur de logs non trouvé : ${logGuildId}`);
-                        return;
-                    }
-                    if (!logChannel || logChannel.type !== ChannelType.GuildText) {
-                        console.error(`[AntiSpam] Salon logs-messages non trouvé ou invalide : ${logMessagesId}`);
-                        return;
-                    }
-                    const perms = logChannel.permissionsFor(client.user);
-                    if (!perms.has([PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks])) {
-                        console.error(`[AntiSpam] Permissions manquantes dans ${logChannel.name} :`, perms.toArray());
-                        return;
-                    }
-                    const embed = new EmbedBuilder()
-                        .setTitle('Spam détecté - Avertissement')
-                        .setDescription(`**Membre** : <@${userId}>\n**Raison** : ${reason}\n**Action** : Avertissement\n**Salon** : <#${message.channel.id}>\n**Quand** : <t:${Math.floor(now / 1000)}:R>`)
-                        .setColor('#FF0000')
-                        .setTimestamp();
-                    await logChannel.send({ embeds: [embed] });
-                    console.log(`[AntiSpam] Log envoyé dans ${logChannel.name} (serveur ${logGuild.name})`);
-                }
-
-                // Supprimer les messages spam (optionnel)
-                if (message.channel.permissionsFor(client.user).has(PermissionFlagsBits.ManageMessages)) {
-                    const messagesToDelete = await message.channel.messages.fetch({ limit: 100 })
-                        .then(msgs => msgs.filter(m => m.author.id === userId && now - m.createdTimestamp < settings.time_window));
-                    if (messagesToDelete.size > 0) {
-                        await message.channel.bulkDelete(messagesToDelete, true);
-                        console.log(`[AntiSpam] Supprimé ${messagesToDelete.size} messages de ${message.author.tag}`);
-                    }
-                }
-            } catch (error) {
-                console.error(`[AntiSpam] Erreur lors du traitement du spam de ${message.author.tag} :`, error.message, error.stack);
-            }
-        });
-    },
+        }
+    }
 };
+
+// Fonction pour appliquer une action (warn) en cas de spam
+async function applyAction(message, action, reason, logChannelId, piloriChannelId) {
+    if (action !== 'warn') return; // Seule action supportée pour l'instant
+
+    try {
+        // Ajouter un warn dans la base
+        await pool.query(
+            'INSERT INTO warns (user_id, guild_id, reason, moderator_id) VALUES ($1, $2, $3, $4)',
+            [message.author.id, message.guild.id, `Spam : ${reason}`, message.client.user.id]
+        );
+
+        // Compter les warns de l’utilisateur
+        const warnCountResult = await pool.query(
+            'SELECT COUNT(*) AS count FROM warns WHERE user_id = $1 AND guild_id = $2',
+            [message.author.id, message.guild.id]
+        );
+        const warnCount = parseInt(warnCountResult.rows[0].count, 10);
+
+        // Loguer l’action dans LOG_MESSAGES_ID
+        const logChannel = message.client.channels.cache.get(logChannelId);
+        if (logChannel && logChannel.isTextBased()) {
+            await logChannel.send(`[AntiSpam] Warn ajouté à <@${message.author.id}> pour : ${reason} (${warnCount}/3).`);
+        } else {
+            console.error(`[AntiSpam] Erreur : LOG_MESSAGES_ID (${logChannelId}) introuvable ou non texte.`);
+        }
+
+        // Envoyer un message dans PILORI_CHANNEL_ID
+        const piloriChannel = message.client.channels.cache.get(piloriChannelId);
+        if (piloriChannel && piloriChannel.isTextBased()) {
+            await piloriChannel.send(`<@${message.author.id}> averti pour spam : ${reason}.`);
+        } else {
+            console.error(`[AntiSpam] Erreur : PILORI_CHANNEL_ID (${piloriChannelId}) introuvable ou non texte.`);
+        }
+
+        // Gérer le 3e warn
+        if (warnCount >= 3) {
+            const warnedRoleId = process.env.WARNED_ROLE_ID;
+            const targetMember = await message.guild.members.fetch(message.author.id).catch(() => null);
+            if (!targetMember) {
+                console.error(`[AntiSpam] Membre ${message.author.id} introuvable pour 3e warn.`);
+                return;
+            }
+
+            let actions = [];
+            let removedRoles = [];
+
+            // Ajouter le rôle Warned
+            if (warnedRoleId && !targetMember.roles.cache.has(warnedRoleId)) {
+                const warnedRole = message.guild.roles.cache.get(warnedRoleId);
+                if (warnedRole) {
+                    await targetMember.roles.add(warnedRole);
+                    actions.push(`rôle ${warnedRole.name} attribué`);
+                    console.log(`[AntiSpam] Ajout du rôle ${warnedRole.name} à ${message.author.tag}`);
+                } else {
+                    console.error(`[AntiSpam] WARNED_ROLE_ID (${warnedRoleId}) introuvable.`);
+                }
+            }
+
+            // Liste des rôles à retirer
+            const rolesToRemove = [
+                { id: process.env.CERTIFIE_ROLE_ID, name: 'Certifié' },
+                { id: process.env.DM_ROLE_ID, name: 'DM' },
+                { id: process.env.GALERIE_ROLE_ID, name: 'Galerie' },
+                { id: process.env.TORTURE_ROLE_ID, name: 'Torture' },
+                { id: process.env.MEMBRE_ROLE_ID, name: 'Membre' }
+            ];
+
+            // Retirer les rôles
+            for (const role of rolesToRemove) {
+                if (role.id && targetMember.roles.cache.has(role.id)) {
+                    const roleObj = message.guild.roles.cache.get(role.id);
+                    if (roleObj) {
+                        await targetMember.roles.remove(roleObj);
+                        actions.push(`rôle ${roleObj.name} retiré`);
+                        removedRoles.push(role.id);
+                        console.log(`[AntiSpam] Retrait du rôle ${roleObj.name} de ${message.author.tag}`);
+                    }
+                }
+            }
+
+            // Stocker les rôles retirés
+            if (removedRoles.length > 0) {
+                await pool.query(
+                    'INSERT INTO warn_removed_roles (guild_id, user_id, removed_roles) VALUES ($1, $2, $3) ' +
+                    'ON CONFLICT (guild_id, user_id) DO UPDATE SET removed_roles = $3',
+                    [message.guild.id, message.author.id, JSON.stringify(removedRoles)]
+                );
+                console.log(`[AntiSpam] Rôles retirés stockés pour ${message.author.tag}: ${removedRoles.join(', ')}`);
+            }
+
+            // Envoyer un message dans WARN_CHANNEL_ID pour le 3e warn
+            const warnChannelId = process.env.WARN_CHANNEL_ID;
+            const warnChannel = message.client.channels.cache.get(warnChannelId);
+            if (warnChannel && warnChannel.isTextBased()) {
+                await warnChannel.send(
+                    `<@${message.author.id}>, tu viens de recevoir ton troisième warn pour : Spam (${reason}).\nAu troisième warn, tu es désormais **isolé du serveur**. Un modérateur décidera de la suite.`
+                );
+                console.log(`[AntiSpam] Message envoyé dans WARN_CHANNEL_ID pour 3e warn de ${message.author.tag}`);
+            } else {
+                console.error(`[AntiSpam] Erreur : WARN_CHANNEL_ID (${warnChannelId}) introuvable ou non texte.`);
+            }
+        }
+    } catch (error) {
+        // Loguer les erreurs d’action
+        console.error('[AntiSpam] Erreur lors de l’action :', error.message, error.stack);
+        const logChannel = message.client.channels.cache.get(logChannelId);
+        if (logChannel && logChannel.isTextBased()) {
+            await logChannel.send(`[AntiSpam] Erreur lors de l’action : ${error.message}`);
+        }
+    }
+}
