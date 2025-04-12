@@ -142,9 +142,18 @@ async function closeTicketChannel(channel, reason) {
     try {
         console.log(`Tentative de fermeture du ticket ${channel.name} pour raison : "${reason}"`);
 
+        // Vérifier permissions bot
+        const botPermissions = channel.permissionsFor(channel.guild.members.me);
+        if (!botPermissions.has(PermissionsBitField.Flags.ManageChannels)) {
+            console.error('Le bot manque la permission ManageChannels pour fermer le ticket');
+            throw new Error('Permission ManageChannels manquante');
+        }
+        console.log('Permissions vérifiées pour fermeture');
+
         // Récupération de tous les messages du canal
+        console.log('Récupération des messages');
         const messages = await fetchAllMessages(channel);
-        const ticketOwner = channel.topic.match(/Ticket ouvert par (.+?) \(/)?.[1] || 'Inconnu';
+        const ticketOwner = channel.topic?.match(/Ticket ouvert par (.+?) \(/)?.[1] || 'Inconnu';
         const sortedMessages = messages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
 
         // Fonction pour générer une couleur unique par auteur
@@ -155,6 +164,7 @@ async function closeTicketChannel(channel, reason) {
         };
 
         // Génération du contenu HTML pour la transcription
+        console.log('Génération transcription HTML');
         let htmlContent = `
             <!DOCTYPE html>
             <html lang="fr">
@@ -217,11 +227,13 @@ async function closeTicketChannel(channel, reason) {
         `;
 
         // Sauvegarde de la transcription en fichier HTML
+        console.log('Sauvegarde transcription');
         const safeOwnerName = ticketOwner.replace(/[^a-zA-Z0-9_-]/g, '_');
         const filePath = path.join(__dirname, `ticket_${safeOwnerName}_${channel.id}.html`);
         await fs.writeFile(filePath, htmlContent, 'utf8');
 
         // Embed pour annoncer la fermeture dans le canal
+        console.log('Envoi embed fermeture');
         const closeEmbed = new EmbedBuilder()
             .setTitle('Ticket fermé')
             .setDescription(`Le ticket a été fermé pour la raison suivante :\n\n"${reason}"`)
@@ -230,6 +242,7 @@ async function closeTicketChannel(channel, reason) {
         await channel.send({ embeds: [closeEmbed] });
 
         // Envoi de la transcription dans le canal de logs (si défini)
+        console.log('Vérification canal de logs');
         const logGuildId = process.env.TICKET_LOG_GUILD_ID;
         const logChannelId = process.env.TICKET_LOG_CHANNEL_ID;
 
@@ -244,6 +257,7 @@ async function closeTicketChannel(channel, reason) {
                 if (!logChannel || logChannel.type !== ChannelType.GuildText) {
                     console.error(`Salon textuel ${logChannelId} introuvable ou non valide dans le serveur ${logGuildId}.`);
                 } else {
+                    console.log('Envoi transcription au canal de logs');
                     await logChannel.send({
                         content: `**Transcription du ticket ${channel.name}**\nOuvert par : ${ticketOwner}\nRaison de fermeture : "${reason}"`,
                         files: [filePath]
@@ -253,14 +267,25 @@ async function closeTicketChannel(channel, reason) {
             }
         }
 
-        // Suppression du fichier temporaire et du canal
-        await fs.unlink(filePath);
+        // Suppression du fichier temporaire
+        console.log('Suppression fichier temporaire');
+        try {
+            await fs.unlink(filePath);
+            console.log('Fichier temporaire supprimé');
+        } catch (unlinkError) {
+            console.error('Erreur lors de la suppression du fichier temporaire :', unlinkError.message);
+        }
+
+        // Suppression du canal
+        console.log('Suppression du canal');
         await channel.delete(`Ticket fermé : ${reason}`);
         console.log(`Ticket fermé avec succès : ${channel.name}`);
 
+        return { success: true };
+
     } catch (error) {
         console.error('Erreur lors de la fermeture du ticket :', error.message, error.stack);
-        throw error;
+        return { success: false, error: error.message };
     }
 }
 

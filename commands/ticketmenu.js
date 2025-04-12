@@ -1,3 +1,4 @@
+// ticketmenu.js
 const { 
     SlashCommandBuilder, 
     PermissionFlagsBits, 
@@ -7,6 +8,7 @@ const {
     EmbedBuilder 
 } = require('discord.js');
 const path = require('path');
+const fs = require('fs').promises;
 const { createTicketChannel } = require('../utils/ticketUtils');
 
 module.exports = {
@@ -18,7 +20,19 @@ module.exports = {
     async execute(interaction) {
         try {
             console.log(`Début de /ticket-menu par ${interaction.member.user.tag}`);
+
             await interaction.deferReply({ ephemeral: true });
+            console.log('deferReply envoyé');
+
+            // Vérifier l’existence de l’image
+            const imagePath = path.join(__dirname, '../img/ticket_membre.png');
+            try {
+                await fs.access(imagePath);
+                console.log(`Image trouvée : ${imagePath}`);
+            } catch (err) {
+                console.error(`Image manquante : ${imagePath}`, err.message);
+                throw new Error(`Image ticket_membre.png introuvable`);
+            }
 
             const selectMenu = new StringSelectMenuBuilder()
                 .setCustomId('select_ticket')
@@ -34,28 +48,43 @@ module.exports = {
                     { label: '🥰🔗 Recrutement', description: ' ', value: 'Recrutement' },
                 ]);
 
-            const imagePath = path.join(__dirname, '../img/ticket_membre.png');
+            console.log('Menu déroulant créé');
+
             const attachment = new AttachmentBuilder(imagePath).setName('ticket_image.png');
+            console.log('AttachmentBuilder créé');
 
             const row = new ActionRowBuilder().addComponents(selectMenu);
+
+            // Vérifier permissions bot
+            const botPermissions = interaction.guild.members.me.permissionsIn(interaction.channel);
+            if (!botPermissions.has([PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles])) {
+                console.error('Permissions manquantes pour le bot dans le canal', botPermissions.toArray());
+                throw new Error('Le bot manque des permissions SendMessages ou AttachFiles');
+            }
+            console.log('Permissions vérifiées pour envoi menu');
 
             await interaction.channel.send({
                 components: [row],
                 files: [attachment],
             });
+            console.log(`Menu envoyé dans ${interaction.channel.id}`);
 
             await interaction.editReply({
                 content: 'Le menu pour ouvrir un ticket a été envoyé avec succès.',
                 ephemeral: true
             });
-            console.log(`Menu envoyé dans ${interaction.channel.id}`);
+            console.log('editReply envoyé');
+
         } catch (error) {
-            console.error('Erreur dans execute de ticket-menu :', error.stack);
-            if (!interaction.replied) {
+            console.error('Erreur dans execute de ticket-menu :', error.message, error.stack);
+            try {
                 await interaction.editReply({
-                    content: 'Erreur lors de l’envoi du menu.',
+                    content: `Erreur lors de l’envoi du menu : ${error.message}`,
                     ephemeral: true
                 });
+                console.log('editReply erreur envoyé');
+            } catch (replyError) {
+                console.error('Erreur lors de editReply :', replyError.message, replyError.stack);
             }
         }
     },
@@ -70,11 +99,8 @@ module.exports = {
         console.log(`Interaction reçue pour ${member.user.tag} avec type ${selectedType}`);
 
         try {
-            // Réponse immédiate à l’interaction pour éviter le timeout
-            await interaction.reply({
-                content: 'Création de votre ticket en cours...',
-                ephemeral: true
-            });
+            await interaction.deferReply({ ephemeral: true });
+            console.log('deferReply envoyé dans handleMenuInteraction');
 
             const customMessages = {
                 'Certification': `## Bienvenue pour ta certification.\nUn membre du Staff va venir dès que possible pour la réaliser.\n\n*La certification te permettra d'avoir un accès plus large au serveur, mais aussi d'accéder aux contenus NSFW du serveur.*\n\n### Pour te faire certifier, tu as deux possibilités :\n\n> * Nous avons besoin d'une photo d'un document sur lequel on peut voir ta photo et ta date de naissance, et un selfie. Cela nous permettra de faire la vérification.\n\n> * Tu peux aussi faire la vérification via un voc (avec cam).\n\n> *Aucune information ne sera conservée.*`,
@@ -89,6 +115,7 @@ module.exports = {
 
             const customMessage = customMessages[selectedType] || 'Un message par défaut si le type n’existe pas';
 
+            console.log('Création embed pour ticket');
             const embed = new EmbedBuilder()
                 .setTitle(`${selectedType.charAt(0).toUpperCase() + selectedType.slice(1)}`)
                 .setDescription(customMessage)
@@ -101,21 +128,27 @@ module.exports = {
                 content += ', <@&1094318706487734483>';
             }
 
-            // Création du ticket en arrière-plan
+            console.log(`Début création ticket pour ${selectedType}`);
             await createTicketChannel(interaction.client, guild, member, selectedType, { content, embeds: [embed] });
             console.log(`Ticket créé pour ${member.user.tag} (Type: ${selectedType})`);
 
-            // Mise à jour de la réponse initiale
             await interaction.editReply({
                 content: 'Votre ticket a été créé avec succès.',
                 ephemeral: true
             });
+            console.log('editReply envoyé dans handleMenuInteraction');
+
         } catch (error) {
-            console.error(`Erreur lors de la création du ticket (${selectedType}) :`, error.stack);
-            await interaction.editReply({
-                content: 'Une erreur est survenue lors de la création de votre ticket.',
-                ephemeral: true
-            });
+            console.error(`Erreur lors de la création du ticket (${selectedType}) :`, error.message, error.stack);
+            try {
+                await interaction.editReply({
+                    content: `Erreur lors de la création du ticket : ${error.message}`,
+                    ephemeral: true
+                });
+                console.log('editReply erreur envoyé dans handleMenuInteraction');
+            } catch (replyError) {
+                console.error('Erreur lors de editReply dans handleMenuInteraction :', replyError.message, replyError.stack);
+            }
         }
     },
 
@@ -124,6 +157,9 @@ module.exports = {
 
         console.log(`Bouton close_ticket cliqué par ${interaction.member.user.tag}`);
         try {
+            await interaction.deferReply({ ephemeral: true });
+            console.log('deferReply envoyé dans handleCloseTicket');
+
             const member = interaction.member;
             const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
             const modoRoleIds = process.env.MODO ? process.env.MODO.split(',').map(id => id.trim()) : [];
@@ -131,22 +167,39 @@ module.exports = {
 
             if (!isAdmin && !hasModoRole) {
                 console.warn(`[Permissions] ${member.user.tag} a essayé de fermer un ticket sans permission`);
-                return interaction.reply({
+                await interaction.editReply({
                     content: 'Vous n\'avez pas la permission de fermer ce ticket.',
                     ephemeral: true
                 });
+                return;
             }
 
             const channel = interaction.channel;
             const { closeTicketChannel } = require('../utils/ticketUtils');
-            await closeTicketChannel(channel, `Ticket fermé par ${member.user.tag}`);
+            console.log('Début fermeture ticket');
+            const result = await closeTicketChannel(channel, `Ticket fermé par ${member.user.tag}`);
+            if (!result.success) {
+                throw new Error(result.error);
+            }
             console.log(`Ticket ${channel.name} fermé par ${member.user.tag}`);
-        } catch (error) {
-            console.error('Erreur lors de la fermeture du ticket :', error.stack);
-            await interaction.reply({
-                content: 'Une erreur est survenue lors de la fermeture du ticket.',
+
+            await interaction.editReply({
+                content: 'Ticket fermé avec succès.',
                 ephemeral: true
             });
+            console.log('editReply envoyé dans handleCloseTicket');
+
+        } catch (error) {
+            console.error('Erreur lors de la fermeture du ticket :', error.message, error.stack);
+            try {
+                await interaction.editReply({
+                    content: `Erreur lors de la fermeture du ticket : ${error.message}`,
+                    ephemeral: true
+                });
+                console.log('editReply erreur envoyé dans handleCloseTicket');
+            } catch (replyError) {
+                console.error('Erreur lors de editReply dans handleCloseTicket :', replyError.message, replyError.stack);
+            }
         }
     }
 };

@@ -109,7 +109,7 @@ module.exports = {
             } catch (error) {
                 console.error('Erreur lors de la création du ticket :', error.message, error.stack);
                 await interaction.editReply({
-                    content: 'Une erreur est survenue lors de la création de votre ticket.',
+                    content: `Erreur lors de la création du ticket : ${error.message}`,
                     ephemeral: true
                 });
             }
@@ -132,21 +132,34 @@ module.exports = {
 
                 if (!isAdmin && !hasModoRole) {
                     console.warn(`[Permissions] ${member.user.tag} a essayé de fermer un ticket sans permission`);
-                    return interaction.editReply({
+                    await interaction.editReply({
                         content: 'Vous n\'avez pas la permission de fermer ce ticket.',
                         ephemeral: true
                     });
+                    return;
                 }
 
                 const channel = interaction.channel;
-                await ticketUtils.closeTicketChannel(channel, `Ticket fermé par ${member.user.tag}`);
+                console.log('Début fermeture ticket');
+                const result = await ticketUtils.closeTicketChannel(channel, `Ticket fermé par ${member.user.tag}`);
+                if (!result.success) {
+                    throw new Error(result.error);
+                }
                 console.log(`Ticket ${channel.name} fermé par ${member.user.tag}`);
+
+                await interaction.editReply({
+                    content: 'Ticket fermé avec succès.',
+                    ephemeral: true
+                });
+                console.log('editReply envoyé dans handleCloseTicket');
+
             } catch (error) {
                 console.error('Erreur lors de la fermeture du ticket :', error.message, error.stack);
                 await interaction.editReply({
-                    content: 'Une erreur est survenue lors de la fermeture du ticket.',
+                    content: `Erreur lors de la fermeture du ticket : ${error.message}`,
                     ephemeral: true
                 });
+                console.log('editReply erreur envoyé dans handleCloseTicket');
             }
         }
     },
