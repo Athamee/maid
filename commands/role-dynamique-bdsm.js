@@ -96,20 +96,13 @@ module.exports = {
         try {
             // Vérifier si l’utilisateur a déjà le rôle
             if (interaction.member.roles.cache.has(roleId)) {
-                console.log(`L’utilisateur a déjà le rôle : ${role.name} (${role.id})`);
-                await interaction.editReply({
-                    content: `Vous avez déjà le rôle : ${role.name}.`,
-                    ephemeral: true
-                });
-                // Option toggle (décommenter pour permettre de retirer le rôle) :
-                /*
+                // Retirer le rôle
                 console.log(`Retrait du rôle : ${role.name} (${role.id})`);
                 await interaction.member.roles.remove(role);
                 await interaction.editReply({
                     content: `Le rôle ${role.name} a été retiré.`,
                     ephemeral: true
                 });
-                */
             } else {
                 // Ajouter le nouveau rôle
                 console.log(`Ajout du rôle : ${role.name} (${role.id})`);
