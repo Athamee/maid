@@ -85,6 +85,9 @@ module.exports = {
             });
         }
 
+        // Différer la réponse immédiatement pour éviter les timeouts
+        await interaction.deferReply({ ephemeral: true });
+
         // Liste des rôles de genre
         const genreRoles = [
             process.env.FEMME_ROLE_ID,
@@ -99,25 +102,38 @@ module.exports = {
         try {
             // Retirer le rôle de genre existant s’il y en a un
             if (existingGenreRole) {
+                console.log(`Retrait du rôle existant : ${existingGenreRole.name} (${existingGenreRole.id})`);
                 await interaction.member.roles.remove(existingGenreRole);
-                await interaction.reply({
-                    content: `Votre rôle précédent (${existingGenreRole.name}) a été retiré.`,
-                    ephemeral: true
+                await interaction.editReply({
+                    content: `Votre rôle précédent (${existingGenreRole.name}) a été retiré.`
+                });
+            } else {
+                console.log('Aucun rôle de genre existant trouvé.');
+                await interaction.editReply({
+                    content: 'Aucun rôle de genre précédent à retirer.'
                 });
             }
 
             // Ajouter le nouveau rôle
+            console.log(`Ajout du rôle : ${role.name} (${role.id})`);
             await interaction.member.roles.add(role);
             await interaction.followUp({
                 content: `Vous avez maintenant le rôle : ${role.name}.`,
                 ephemeral: true
             });
         } catch (error) {
-            console.error('Erreur lors de la gestion des rôles :', error);
-            await interaction.reply({
-                content: 'Une erreur est survenue lors de la modification de vos rôles.',
-                ephemeral: true
-            });
+            console.error('Erreur lors de la gestion des rôles :', error.message, error.stack);
+            // Si editReply a déjà été appelé, utiliser followUp pour les erreurs
+            if (interaction.replied) {
+                await interaction.followUp({
+                    content: 'Une erreur est survenue lors de la modification de vos rôles.',
+                    ephemeral: true
+                });
+            } else {
+                await interaction.editReply({
+                    content: 'Une erreur est survenue lors de la modification de vos rôles.'
+                });
+            }
         }
     }
 };
