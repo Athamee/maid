@@ -32,13 +32,13 @@ module.exports = {
 
             // Définir les boutons d’orientation
             const orientationButtons = [
-                { desc: "Hétéro", emoji: '<:orientation_hetero:1340035822079516702>', role: process.env.HETERO_ROLE_ID },
-                { desc: "Homo", emoji: '<:orientation_homo:1340035825036517416>', role: process.env.HOMO_ROLE_ID },
-                { desc: "Bi", emoji: '<:orientation_bi:1340035818865094667>', role: process.env.BI_ROLE_ID },
-                { desc: "Pan", emoji: '<:orientation_pan:1340035829601955850>', role: process.env.PAN_ROLE_ID },
-                { desc: "Sapio", emoji: '<:orientation_sapio:1340035833158967377>', role: process.env.SAPIO_ROLE_ID },
-                { desc: "Asexuel", emoji: '<:orientation_asexuel:1340035815487488050>', role: process.env.ASEXUEL_ROLE_ID },
-                { desc: "Autres", emoji: '<:orientation_autre:1340035811881222226>', role: process.env.ORIENTATION_ROLE_ID }
+                { desc: "Hétérosexuel.le", emoji: '<:orientation_heterosexual:1340037065122906202>', role: process.env.HETERO_ROLE_ID },
+                { desc: "Homosexuel.le", emoji: '<:orientation_homosexual:1340037075726106654>', role: process.env.HOMO_ROLE_ID },
+                { desc: "Bisexuel.le", emoji: '<:orientation_bisexual:1340037061612273664>', role: process.env.BI_ROLE_ID },
+                { desc: "Pansexuel.le", emoji: '<:orientation_pansexual:1340037068109123704>', role: process.env.PAN_ROLE_ID },
+                { desc: "Sapiosexuel.le", emoji: '<:orientation_sapiosexual:1340037073096278037>', role: process.env.SAPIO_ROLE_ID },
+                { desc: "Asexuel.le", emoji: '<:orientation_asexual:1340037054247075951>', role: process.env.ASEXUEL_ROLE_ID },
+                { desc: "Autres", emoji: '<:orientation_autres:1340037057325699072>', role: process.env.ORIENTATION_ROLE_ID }
             ];
 
             // Diviser les boutons en groupes de 5 max

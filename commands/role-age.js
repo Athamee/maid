@@ -32,11 +32,11 @@ module.exports = {
 
             // Définir les boutons d’âge
             const ageButtons = [
-                { desc: "18-24 ans", emoji: '<:age_18_24:1340035751846187018>', role: process.env.AGE1_ROLE_ID },
-                { desc: "25-30 ans", emoji: '<:age_25_30:1340035756118421535>', role: process.env.AGE2_ROLE_ID },
-                { desc: "31-35 ans", emoji: '<:age_31_35:1340035759641653299>', role: process.env.AGE3_ROLE_ID },
-                { desc: "36-39 ans", emoji: '<:age_36_39:1340035762950946827>', role: process.env.AGE4_ROLE_ID },
-                { desc: "40 ans et +", emoji: '<:age_40_plus:1340035766256025650>', role: process.env.AGE5_ROLE_ID }
+                { desc: "18-24 ans", emoji: '<:age_18_24:1340036002395197544>', role: process.env.AGE1_ROLE_ID },
+                { desc: "25-30 ans", emoji: '<:age_25_30:1340036005885116476>', role: process.env.AGE2_ROLE_ID },
+                { desc: "31-35 ans", emoji: '<:age_31_35:1340036008670134292>', role: process.env.AGE3_ROLE_ID },
+                { desc: "36-40 ans", emoji: '<:age_36_40:1340036010838589523>', role: process.env.AGE4_ROLE_ID },
+                { desc: "41 ans et +", emoji: '<:age_41:1340036014466535488>', role: process.env.AGE5_ROLE_ID }
             ];
 
             // Créer les boutons

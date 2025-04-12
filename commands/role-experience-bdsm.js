@@ -32,10 +32,10 @@ module.exports = {
 
             // Définir les boutons d’expérience BDSM
             const experienceButtons = [
-                { desc: "Novice", emoji: '<:xp_bdsm_25:1340037754502910002>', role: process.env.KWBDSM_ROLE_ID },
-                { desc: "Amateur.e", emoji: '<:xp_bdsm_50:1340037757963206656>', role: process.env.KWBDSM50_ROLE_ID },
-                { desc: "Confirmé.e", emoji: '<:xp_bdsm_75:1340037761209602159>', role: process.env.KWBDSM75_ROLE_ID },
-                { desc: "Expérimenté.e", emoji: '<:xp_bdsm_100:1340037764392947722>', role: process.env.KWBDSM100_ROLE_ID }
+                { desc: "Novice", emoji: '<:xp_bdsm_25:1340037754502910002>', role: process.env.XPBDSM25_ROLE_ID },
+                { desc: "Amateur.e", emoji: '<:xp_bdsm_50:1340037757963206656>', role: process.env.XPBDSM50_ROLE_ID },
+                { desc: "Confirmé.e", emoji: '<:xp_bdsm_75:1340037761209602159>', role: process.env.XPBDSM75_ROLE_ID },
+                { desc: "Expérimenté.e", emoji: '<:xp_bdsm_100:1340037764392947722>', role: process.env.XPBDSM100_ROLE_ID }
             ];
 
             // Créer les boutons

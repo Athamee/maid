@@ -32,11 +32,11 @@ module.exports = {
 
             // Définir les boutons de situation relationnelle
             const relationButtons = [
-                { desc: "Couple", emoji: '<:situation_couple:1340035925891153920>', role: process.env.COUPLE_ROLE_ID },
-                { desc: "Ouverte", emoji: '<:situation_libre:1340035932583043153>', role: process.env.LIBRE_ROLE_ID },
-                { desc: "Célibataire", emoji: '<:situation_celibataire:1340035928730693682>', role: process.env.CELIB_ROLE_ID },
-                { desc: "Compliqué", emoji: '<:situation_complique:1340035921834651680>', role: process.env.COMPLIQUE_ROLE_ID },
-                { desc: "Polyamoureuse", emoji: '<:situation_polyamoureux:1340035935959244830>', role: process.env.POLY_ROLE_ID }
+                { desc: "Couple", emoji: '<:relation_couple:1340037572751265846>', role: process.env.COUPLE_ROLE_ID },
+                { desc: "Ouverte", emoji: '<:relation_ouverte:1340037575322239017>', role: process.env.LIBRE_ROLE_ID },
+                { desc: "Célibataire", emoji: '<:relation_clibataire:1340037567361323088>', role: process.env.CELIB_ROLE_ID },
+                { desc: "Compliqué", emoji: '<:relation_compliquee:1340037569542492220>', role: process.env.COMPLIQUE_ROLE_ID },
+                { desc: "Polyamoureuse", emoji: '<:relation_polyamoureuse:1340037578413310045>', role: process.env.POLY_ROLE_ID }
             ];
 
             // Créer les boutons

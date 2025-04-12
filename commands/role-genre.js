@@ -32,11 +32,11 @@ module.exports = {
 
             // Définir les boutons de genre
             const genreButtons = [
-                { desc: "Femme", emoji: '<:genre_femme:1340035331628830762>', role: process.env.FEMME_ROLE_ID },
-                { desc: "MTF", emoji: '<:genre_mtf:1340035335063982151>', role: process.env.MTF_ROLE_ID },
-                { desc: "Autres", emoji: '<:genre_autre:1340035328031113238>', role: process.env.AUTRES_ROLE_ID },
-                { desc: "FTM", emoji: '<:genre_ftm:1340035329893384254>', role: process.env.FTM_ROLE_ID },
-                { desc: "Homme", emoji: '<:genre_homme:1340035333512290334>', role: process.env.HOMME_ROLE_ID }
+                { desc: "Femme", emoji: '<:genre_femme:1340036682149265552>', role: process.env.FEMME_ROLE_ID },
+                { desc: "MTF", emoji: '<:genre_mtf:1340036690076631230>', role: process.env.MTF_ROLE_ID },
+                { desc: "Autres", emoji: '<:genre_autre:1340036680048054343>', role: process.env.AUTRES_ROLE_ID },
+                { desc: "FTM", emoji: '<:genre_ftm:1340036684686954508>', role: process.env.FTM_ROLE_ID },
+                { desc: "Homme", emoji: '<:genre_homme:1340036687149011089>', role: process.env.HOMME_ROLE_ID }
             ];
 
             // Créer les boutons

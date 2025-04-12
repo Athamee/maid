@@ -32,14 +32,14 @@ module.exports = {
 
             // Définir les boutons de dynamique BDSM
             const bdsmButtons = [
-                { desc: "D/S", emoji: '<:dynamique_ds:1340094362564239510>', role: process.env.DS_ROLE_ID },
-                { desc: "M/E", emoji: '<:dynamique_me:1340094365777084487>', role: process.env.ME_ROLE_ID },
-                { desc: "Sous contrat", emoji: '<:dynamique_contrat:1340094358854688809>', role: process.env.CONTRAT_ROLE_ID },
-                { desc: "Sous collier", emoji: '<:dynamique_collier:1340094356027711538>', role: process.env.COLLIER_ROLE_ID },
-                { desc: "Mentorat", emoji: '<:dynamique_mentor:1340094369482338385>', role: process.env.MENTOR_ROLE_ID },
-                { desc: "Sous mentorat", emoji: '<:dynamique_sous_mentor:1340094372805787659>', role: process.env.MENTORAT_ROLE_ID },
-                { desc: "Protection", emoji: '<:dynamique_protection:1340094376148631632>', role: process.env.PROTECTION_ROLE_ID },
-                { desc: "Sous protection", emoji: '<:dynamique_sous_protection:1340094379290169394>', role: process.env.PROTECTORAT_ROLE_ID }
+                { desc: "D/S", emoji: '<:dynamique_bdsm_relation_ds:1340036464905424906>', role: process.env.DS_ROLE_ID },
+                { desc: "M/E", emoji: '<:dynamique_bdsm_relation_me:1340036468470448138>', role: process.env.ME_ROLE_ID },
+                { desc: "Sous contrat", emoji: '<:dynamique_bdsm_sous_contrat:1340036475613614192>', role: process.env.CONTRAT_ROLE_ID },
+                { desc: "Sous collier", emoji: '<:dynamique_bdsm_sous_collier:1340036471934943332>', role: process.env.COLLIER_ROLE_ID },
+                { desc: "Mentorat", emoji: '<:dynamique_bdsm_mentorat:1340119674045599785>', role: process.env.MENTOR_ROLE_ID },
+                { desc: "Sous mentorat", emoji: '<:dynamique_bdsm_sous_mentorat:1340119681763377284>', role: process.env.MENTORAT_ROLE_ID },
+                { desc: "Protectorat", emoji: '<:dynamique_bdsm_protectorat:1340119677027749969> ', role: process.env.PROTECTION_ROLE_ID },
+                { desc: "Sous protection", emoji: '<:dynamique_bdsm_sous_protectorat:1340119683906666617>', role: process.env.PROTECTORAT_ROLE_ID }
             ];
 
             // Diviser les boutons en groupes de 5 max

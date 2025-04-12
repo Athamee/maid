@@ -32,9 +32,8 @@ module.exports = {
 
             // Définir les boutons pour les événements
             const eventButtons = [
-                { desc: "Événements", emoji: '<:evenements:1340038044043747379>', role: process.env.EVENTS_ROLE_ID },
-                { desc: "Munch", emoji: '<:munch:1340038047176912958>', role: process.env.MUNCH_ROLE_ID },
-                { desc: "Soirée", emoji: '<:soiree:1340038050537173063>', role: process.env.SOIREE_ROLE_ID }
+                { desc: "Animations", emoji: '<:autre_animation:1340092135428325467>', role: process.env.ANIMATION_ROLE_ID },
+                { desc: "Vocal", emoji: '<:autre_vocal:1340092138616000552>', role: process.env.VOCAL_ROLE_ID },
             ];
 
             // Créer les boutons

@@ -32,8 +32,8 @@ module.exports = {
 
             // Définir les boutons pour les messages privés
             const dmButtons = [
-                { desc: "Ouvert aux MP", emoji: '<:mp_oui:1340037973407477760>', role: process.env.DMO_ROLE_ID },
-                { desc: "Fermé aux MP", emoji: '<:mp_non:1340037969812799529>', role: process.env.DMN_ROLE_ID }
+                { desc: "Sur demande", emoji: '<:dm_sur_demande:1340036125108080813>', role: process.env.DEMANDE_ROLE_ID },
+                { desc: "Fermé", emoji: '<:dm_fermes:1340036121295458395>', role: process.env.FERME_ROLE_ID }
             ];
 
             // Créer les boutons

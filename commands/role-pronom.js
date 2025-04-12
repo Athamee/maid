@@ -32,9 +32,9 @@ module.exports = {
 
             // Définir les boutons de pronom
             const pronomButtons = [
-                { desc: "Elle", emoji: '<:pronom_elle:1340035576001531964>', role: process.env.ELLE_ROLE_ID },
-                { desc: "Iel", emoji: '<:pronom_iel:1340035579178410085>', role: process.env.IEL_ROLE_ID },
-                { desc: "Il", emoji: '<:pronom_il:1340035581976006726>', role: process.env.IL_ROLE_ID }
+                { desc: "Elle", emoji: '<:pronom_elle:1340037474831040603>', role: process.env.ELLE_ROLE_ID },
+                { desc: "Iel", emoji: '<:pronom_iel:1340037478383489137>', role: process.env.IEL_ROLE_ID },
+                { desc: "Il", emoji: '<:pronom_il:1340037481340604568>', role: process.env.IL_ROLE_ID }
             ];
 
             // Créer les boutons
