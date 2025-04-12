@@ -1,65 +1,81 @@
 // Charge les variables d’environnement depuis .env uniquement si on n’est pas sur Render
 if (!process.env.RENDER) {
-    require('dotenv').config();
+    require('dotenv').config(); // Permet de lire les variables comme TOKEN, ID_APP, etc.
 }
 
+// Importation des modules nécessaires
 const { Client, GatewayIntentBits, Collection, Routes } = require('discord.js');
 const { REST } = require('@discordjs/rest');
 const path = require('path');
+const fs = require('fs');
 const express = require('express');
-const pool = require('./db');
+const pool = require('./db'); // Connexion à la base de données PostgreSQL
 
+// Initialisation du serveur Express pour les vérifications de santé
 const app = express();
 
+// Route /health pour vérifier que le bot est en ligne
 app.get('/health', (req, res) => res.status(200).send('Maid babe est en bonne santé !'));
+
+// Route racine pour une confirmation simple
 app.get('/', (req, res) => res.send('Ta servante dévouée, Maid babe, est vivante !'));
 
+// Définition du port (fourni par l’environnement ou 8000 par défaut)
 const port = process.env.PORT || 8000;
 app.listen(port, () => console.log(`Serveur Express démarré sur le port ${port}`));
 
+// Création du client Discord avec les intents nécessaires
 const client = new Client({
     intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildModeration,
-        GatewayIntentBits.GuildVoiceStates
+        GatewayIntentBits.Guilds, // Accès aux serveurs
+        GatewayIntentBits.GuildMembers, // Gestion des membres
+        GatewayIntentBits.GuildMessages, // Lecture des messages
+        GatewayIntentBits.MessageContent, // Contenu des messages
+        GatewayIntentBits.GuildModeration, // Modération (bans, etc.)
+        GatewayIntentBits.GuildVoiceStates // État des salons vocaux
     ]
 });
 
+// Collection pour stocker les commandes chargées
 client.commands = new Collection();
 
+// Fonction pour charger les commandes depuis le dossier commands
 async function loadCommands() {
     const commandsPath = path.join(__dirname, 'commands');
-    const commandFiles = require('fs').readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+    const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
     for (const file of commandFiles) {
         const filePath = path.join(commandsPath, file);
         try {
             const command = require(filePath);
-            if (!command.data || !command.data.name) {
-                console.error(`Erreur : La commande dans ${file} n'a pas de propriété 'data' ou 'data.name' valide`);
+            // Vérifie que la commande a une propriété data.name ou commandDatas.name valide
+            const commandName = command.data?.name || command.commandDatas?.name;
+            if (!commandName) {
+                console.error(`Erreur : La commande dans ${file} n'a pas de propriété 'data.name' ou 'commandDatas.name' valide`);
                 continue;
             }
-            client.commands.set(command.data.name, command);
-            console.log(`Commande chargée : ${command.data.name}`);
+            client.commands.set(commandName, command);
+            console.log(`Commande chargée : ${commandName}`);
         } catch (error) {
             console.error(`Erreur lors du chargement de ${file} :`, error.message, error.stack);
         }
     }
 }
 
+// Fonction pour déployer les commandes slash via l’API Discord
 async function deployCommands() {
     const commands = [];
-    for (const [name, command] of client.commands) {
-        commands.push(command.data.toJSON());
+    // Convertir chaque commande en JSON pour l’API
+    for (const command of client.commands.values()) {
+        const commandData = command.data || command.commandDatas;
+        commands.push(commandData.toJSON());
     }
 
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
     try {
         console.log('Déploiement des commandes Slash...');
+        // Déployer globalement pour l’application
         await rest.put(Routes.applicationCommands(process.env.ID_APP), { body: commands });
         console.log('Commandes déployées avec succès !');
     } catch (error) {
@@ -67,8 +83,10 @@ async function deployCommands() {
     }
 }
 
+// Fonction pour initialiser les tables de la base de données
 async function initDatabase() {
     try {
+        // Table warns : stocke les avertissements des membres
         await pool.query(`
             CREATE TABLE IF NOT EXISTS warns (
                 id SERIAL PRIMARY KEY,
@@ -79,6 +97,8 @@ async function initDatabase() {
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+
+        // Table xp : suit les XP et niveaux des membres
         await pool.query(`
             CREATE TABLE IF NOT EXISTS xp (
                 user_id TEXT NOT NULL,
@@ -89,6 +109,8 @@ async function initDatabase() {
                 PRIMARY KEY (user_id, guild_id)
             )
         `);
+
+        // Table xp_settings : paramètres XP du serveur
         await pool.query(`
             CREATE TABLE IF NOT EXISTS xp_settings (
                 guild_id TEXT PRIMARY KEY,
@@ -101,6 +123,8 @@ async function initDatabase() {
                 no_camera_channels TEXT DEFAULT '[]'
             )
         `);
+
+        // Table level_up_messages : messages personnalisés pour les niveaux
         await pool.query(`
             CREATE TABLE IF NOT EXISTS level_up_messages (
                 guild_id TEXT NOT NULL,
@@ -109,6 +133,8 @@ async function initDatabase() {
                 PRIMARY KEY (guild_id, level)
             )
         `);
+
+        // Table voice_role_settings : associe rôles et salons vocaux
         await pool.query(`
             CREATE TABLE IF NOT EXISTS voice_role_settings (
                 guild_id TEXT NOT NULL,
@@ -119,7 +145,7 @@ async function initDatabase() {
             )
         `);
 
-        // Migration pour default_level_message
+        // Migration : ajouter default_level_message si absent
         await pool.query(`
             DO $$
             BEGIN
@@ -139,7 +165,7 @@ async function initDatabase() {
             $$;
         `);
 
-        // Migration pour level_up_channel
+        // Migration : ajouter level_up_channel si absent
         await pool.query(`
             DO $$
             BEGIN
@@ -156,7 +182,7 @@ async function initDatabase() {
             $$;
         `);
 
-        // Migration pour excluded_roles
+        // Migration : ajouter excluded_roles si absent
         await pool.query(`
             DO $$
             BEGIN
@@ -173,7 +199,7 @@ async function initDatabase() {
             $$;
         `);
 
-        // Migration pour no_camera_channels
+        // Migration : ajouter no_camera_channels si absent
         await pool.query(`
             DO $$
             BEGIN
@@ -197,13 +223,18 @@ async function initDatabase() {
     }
 }
 
-client.once('ready', () => console.log('Maid babe est en ligne !'));
+// Événement : bot prêt
+client.once('ready', () => {
+    console.log('Maid babe est en ligne !');
+});
 
+// Événement : nouveau membre rejoint le serveur
 client.on('guildMemberAdd', async member => {
     const userId = member.id;
     const guildId = member.guild.id;
 
     try {
+        // Ajouter le membre à la table xp avec des valeurs par défaut
         await pool.query(
             'INSERT INTO xp (user_id, guild_id, xp, level, last_message) VALUES ($1, $2, 0, 1, NOW()) ' +
             'ON CONFLICT (user_id, guild_id) DO NOTHING',
@@ -215,11 +246,13 @@ client.on('guildMemberAdd', async member => {
     }
 });
 
+// Événement : membre quitte le serveur
 client.on('guildMemberRemove', async member => {
     const userId = member.id;
     const guildId = member.guild.id;
 
     try {
+        // Supprimer les données du membre (XP et warns)
         await pool.query('DELETE FROM xp WHERE user_id = $1 AND guild_id = $2', [userId, guildId]);
         await pool.query('DELETE FROM warns WHERE user_id = $1 AND guild_id = $2', [userId, guildId]);
         console.log(`Membre ${userId} supprimé de la BD pour le serveur ${guildId}`);
@@ -228,94 +261,97 @@ client.on('guildMemberRemove', async member => {
     }
 });
 
+// Événement : gestion des interactions (commandes, boutons)
 client.on('interactionCreate', async interaction => {
-    // Gestion des commandes Slash
-    if (interaction.isCommand()) {
-        const command = client.commands.get(interaction.commandName);
-        if (!command) {
-            console.warn(`Commande inconnue : ${interaction.commandName}`);
-            return;
-        }
-        try {
+    try {
+        // Gestion des commandes Slash
+        if (interaction.isCommand()) {
+            const command = client.commands.get(interaction.commandName);
+            if (!command) {
+                console.warn(`Commande inconnue : ${interaction.commandName}`);
+                return;
+            }
             console.log(`Commande exécutée : ${interaction.commandName} par ${interaction.user.tag}`);
             await command.execute(interaction);
-        } catch (error) {
-            console.error(`Erreur dans la commande ${interaction.commandName} :`, error.message, error.stack);
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: 'Erreur lors de l’exécution de la commande !', ephemeral: true });
-            } else if (interaction.deferred) {
-                await interaction.editReply({ content: 'Erreur lors de l’exécution de la commande !' });
-            }
         }
-    }
 
-    // Gestion des boutons (générique pour toutes les commandes)
-    if (interaction.isButton()) {
-        // Recherche de la commande associée au customId
-        for (const [name, command] of client.commands) {
-            if (command.handleButtonInteraction && interaction.customId === 'accept_reglement') {
+        // Gestion des boutons
+        if (interaction.isButton()) {
+            console.log(`Bouton cliqué : ${interaction.customId} par ${interaction.user.tag}`);
+
+            // Parcourir toutes les commandes pour trouver celle qui gère ce bouton
+            for (const [name, command] of client.commands) {
+                if (!command.handleButtonInteraction) continue;
+
+                // Gestion des boutons par préfixe ou ID spécifique
+                if (
+                    (name === 'reglement' && interaction.customId === 'accept_reglement') ||
+                    (name === 'ticket' && (interaction.customId === 'create_ticket' || interaction.customId === 'close_ticket')) ||
+                    (name === 'role-genre' && interaction.customId.startsWith('genre_')) ||
+                    (name === 'role-pronom' && interaction.customId.startsWith('pronom_')) ||
+                    (name === 'role-age' && interaction.customId.startsWith('age_')) ||
+                    (name === 'role-orientation' && interaction.customId.startsWith('orientation_')) ||
+                    (name === 'role-situation-relationnelle' && interaction.customId.startsWith('relation_')) ||
+                    (name === 'role-dynamique-bdsm' && interaction.customId.startsWith('bdsm_')) ||
+                    (name === 'role-situation-bdsm' && interaction.customId.startsWith('bdsm_')) ||
+                    (name === 'role-connaissance-bdsm' && interaction.customId.startsWith('connaissance-bdsm_')) ||
+                    (name === 'role-experience-bdsm' && interaction.customId.startsWith('experience-bdsm_')) ||
+                    (name === 'role-experience-vanille' && interaction.customId.startsWith('experience-vanille_')) ||
+                    (name === 'role-message-prive' && interaction.customId.startsWith('dm_')) ||
+                    (name === 'role-evenement' && interaction.customId.startsWith('event_')) ||
+                    (name === 'role-membre' && interaction.customId.startsWith('membre_'))
+                ) {
+                    try {
+                        await command.handleButtonInteraction(interaction);
+                        return; // Sortir après traitement
+                    } catch (error) {
+                        console.error(`Erreur dans la gestion du bouton ${interaction.customId} pour ${name} :`, error.message, error.stack);
+                        if (!interaction.replied && !interaction.deferred) {
+                            await interaction.reply({ content: 'Erreur lors du traitement du bouton !', ephemeral: true });
+                        }
+                    }
+                }
+            }
+
+            // Gestion spécifique pour le bouton de fermeture de ticket
+            const ticketCommand = client.commands.get('ticket');
+            if (ticketCommand && ticketCommand.handleCloseButtonInteraction && interaction.customId === 'close_ticket') {
                 try {
-                    console.log(`Bouton ${interaction.customId} cliqué par ${interaction.user.tag} (commande : ${name})`);
-                    await command.handleButtonInteraction(interaction);
-                    return; // Sortir après avoir traité
+                    console.log(`Bouton close_ticket cliqué par ${interaction.user.tag}`);
+                    await ticketCommand.handleCloseButtonInteraction(interaction);
                 } catch (error) {
-                    console.error(`Erreur dans la gestion du bouton ${interaction.customId} pour ${name} :`, error.message, error.stack);
+                    console.error(`Erreur dans la gestion du bouton close_ticket pour ticket :`, error.message, error.stack);
                     if (!interaction.replied && !interaction.deferred) {
                         await interaction.reply({ content: 'Erreur lors du traitement du bouton !', ephemeral: true });
                     }
                 }
             }
         }
-
-        // Gestion spécifique pour ticket.js (conservée)
-        const ticketCommand = client.commands.get('ticket');
-        if (ticketCommand) {
-            try {
-                if (interaction.customId === 'ticket_type_6' && ticketCommand.handleButtonInteraction) {
-                    console.log(`Bouton ticket_type_6 cliqué par ${interaction.user.tag}`);
-                    await ticketCommand.handleButtonInteraction(interaction);
-                } else if (interaction.customId === 'close_ticket' && ticketCommand.handleCloseTicket) {
-                    console.log(`Bouton close_ticket cliqué par ${interaction.user.tag}`);
-                    await ticketCommand.handleCloseTicket(interaction);
-                }
-            } catch (error) {
-                console.error(`Erreur dans la gestion du bouton ${interaction.customId} pour ticket :`, error.message, error.stack);
-                if (!interaction.replied && !interaction.deferred) {
-                    await interaction.reply({ content: 'Erreur lors du traitement du bouton !', ephemeral: true });
-                }
-            }
-        }
-    }
-
-    // Gestion des menus déroulants (pour ticket-menu.js)
-    if (interaction.isStringSelectMenu()) {
-        const command = client.commands.get('ticket-menu');
-        if (command && command.handleMenuInteraction) {
-            try {
-                console.log(`Menu déroulant sélectionné par ${interaction.user.tag} (customId: ${interaction.customId})`);
-                await command.handleMenuInteraction(interaction);
-            } catch (error) {
-                console.error(`Erreur dans la gestion du menu ${interaction.customId} :`, error.message, error.stack);
-                if (!interaction.replied && !interaction.deferred) {
-                    await interaction.reply({ content: 'Erreur lors du traitement du menu !', ephemeral: true });
-                }
-            }
+    } catch (error) {
+        console.error('Erreur lors de l’interaction :', error.message, error.stack);
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({ content: 'Erreur lors du traitement de l’interaction !', ephemeral: true });
+        } else if (interaction.deferred) {
+            await interaction.editReply({ content: 'Erreur lors du traitement de l’interaction !' });
         }
     }
 });
 
+// Charger le gestionnaire de messages (XP, réactions, vocal)
 require('./handlers/messageHandler')(client);
 
+// Fonction principale pour démarrer le bot
 async function startBot() {
     try {
-        await initDatabase();
-        await loadCommands();
-        await deployCommands();
-        await client.login(process.env.TOKEN);
+        await initDatabase(); // Initialiser la base de données
+        await loadCommands(); // Charger les commandes
+        await deployCommands(); // Déployer les commandes slash
+        await client.login(process.env.TOKEN); // Connexion du bot
     } catch (error) {
         console.error('Erreur lors de l’initialisation :', error.message, error.stack);
-        process.exit(1);
+        process.exit(1); // Arrêter si échec
     }
 }
-// Forcer la mise à jour
+
+// Lancer le bot
 startBot();

@@ -1,0 +1,128 @@
+const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, AttachmentBuilder } = require('discord.js');
+const path = require('path');
+
+module.exports = {
+    // Définition de la commande
+    commandDatas: new SlashCommandBuilder()
+        .setName('role-orientation')
+        .setDescription('Sélectionnez votre orientation.'),
+
+    // Exécution de la commande
+    async execute(interaction) {
+        // Vérifier les permissions administratives
+        if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+            return interaction.reply({
+                content: 'Vous n\'avez pas la permission d\'utiliser cette commande.',
+                ephemeral: true
+            });
+        }
+
+        try {
+            // Différer la réponse initiale
+            await interaction.deferReply({ ephemeral: true });
+
+            // Définir le chemin vers l'image locale
+            const imagePath = path.join(__dirname, '../img/orientation.png');
+            const attachment = new AttachmentBuilder(imagePath).setName('orientation.png');
+
+            // Envoyer d'abord l'image
+            await interaction.channel.send({
+                files: [attachment]
+            });
+
+            // Définir les boutons d’orientation
+            const orientationButtons = [
+                { desc: "Hétéro", emoji: '<:orientation_hetero:1340035822079516702>', role: process.env.HETERO_ROLE_ID },
+                { desc: "Homo", emoji: '<:orientation_homo:1340035825036517416>', role: process.env.HOMO_ROLE_ID },
+                { desc: "Bi", emoji: '<:orientation_bi:1340035818865094667>', role: process.env.BI_ROLE_ID },
+                { desc: "Pan", emoji: '<:orientation_pan:1340035829601955850>', role: process.env.PAN_ROLE_ID },
+                { desc: "Sapio", emoji: '<:orientation_sapio:1340035833158967377>', role: process.env.SAPIO_ROLE_ID },
+                { desc: "Asexuel", emoji: '<:orientation_asexuel:1340035815487488050>', role: process.env.ASEXUEL_ROLE_ID },
+                { desc: "Autres", emoji: '<:orientation_autre:1340035811881222226>', role: process.env.ORIENTATION_ROLE_ID }
+            ];
+
+            // Diviser les boutons en groupes de 5 max
+            const buttonRows = [];
+            for (let i = 0; i < orientationButtons.length; i += 5) {
+                const buttons = orientationButtons.slice(i, i + 5).map((option, index) =>
+                    new ButtonBuilder()
+                        .setCustomId(`orientation_${option.role}_${i + index}`) // Ajout d'un index unique
+                        .setLabel(option.desc)
+                        .setEmoji(option.emoji)
+                        .setStyle(ButtonStyle.Secondary)
+                );
+                buttonRows.push(new ActionRowBuilder().addComponents(buttons));
+            }
+
+            // Envoyer les ActionRows contenant les boutons
+            for (const row of buttonRows) {
+                await interaction.channel.send({ components: [row] });
+            }
+
+            // Répondre pour confirmer l'exécution de la commande
+            await interaction.editReply({ content: 'Les boutons de sélection d’orientation ont été envoyés.', ephemeral: true });
+        } catch (error) {
+            console.error('Erreur lors de l\'exécution de la commande :', error);
+            // Gérer les erreurs si la réponse n’a pas encore été envoyée
+            if (!interaction.replied) {
+                await interaction.editReply({
+                    content: 'Une erreur est survenue.',
+                    ephemeral: true
+                });
+            }
+        }
+    },
+
+    // Gestion de l’interaction avec les boutons
+    handleButtonInteraction: async (interaction) => {
+        // Vérifier si l’interaction concerne un bouton d’orientation
+        const customId = interaction.customId;
+        if (!customId.startsWith('orientation_')) return;
+
+        const roleId = customId.split('_')[1];
+        const role = interaction.guild.roles.cache.get(roleId);
+        if (!role) {
+            return interaction.reply({
+                content: 'Le rôle sélectionné est introuvable.',
+                ephemeral: true
+            });
+        }
+
+        // Liste des rôles d’orientation
+        const orientationRoles = [
+            process.env.HETERO_ROLE_ID,
+            process.env.HOMO_ROLE_ID,
+            process.env.BI_ROLE_ID,
+            process.env.PAN_ROLE_ID,
+            process.env.SAPIO_ROLE_ID,
+            process.env.ASEXUEL_ROLE_ID,
+            process.env.ORIENTATION_ROLE_ID
+        ];
+
+        const existingOrientationRole = interaction.member.roles.cache.find(r => orientationRoles.includes(r.id));
+
+        try {
+            // Retirer le rôle d’orientation existant s’il y en a un
+            if (existingOrientationRole) {
+                await interaction.member.roles.remove(existingOrientationRole);
+                await interaction.reply({
+                    content: `Votre rôle précédent (${existingOrientationRole.name}) a été retiré.`,
+                    ephemeral: true
+                });
+            }
+
+            // Ajouter le nouveau rôle
+            await interaction.member.roles.add(role);
+            await interaction.followUp({
+                content: `Vous avez maintenant le rôle : ${role.name}.`,
+                ephemeral: true
+            });
+        } catch (error) {
+            console.error('Erreur lors de la gestion des rôles :', error);
+            await interaction.reply({
+                content: 'Une erreur est survenue lors de la modification de vos rôles.',
+                ephemeral: true
+            });
+        }
+    }
+};
