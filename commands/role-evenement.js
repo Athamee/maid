@@ -33,7 +33,7 @@ module.exports = {
             // Définir les boutons pour les événements
             const eventButtons = [
                 { desc: "Animations", emoji: '<:autre_animation:1340092135428325467>', role: process.env.ANIMATION_ROLE_ID },
-                { desc: "Vocal", emoji: '<:autre_vocal:1340092138616000552>', role: process.env.VOCAL_ROLE_ID },
+                { desc: "Vocal", emoji: '<:autre_vocal:1340092138616000552>', role: process.env.VOCAL_ROLE_ID }
             ];
 
             // Créer les boutons
@@ -57,7 +57,6 @@ module.exports = {
             await interaction.editReply({ content: 'Les boutons de sélection pour les événements ont été envoyés.', ephemeral: true });
         } catch (error) {
             console.error('Erreur lors de l\'exécution de la commande :', error);
-            // Gérer les erreurs si la réponse n’a pas encore été envoyée
             if (!interaction.replied) {
                 await interaction.editReply({
                     content: 'Une erreur est survenue.',
@@ -82,26 +81,31 @@ module.exports = {
             });
         }
 
+        // Différer la réponse immédiatement pour éviter les timeouts
+        await interaction.deferReply({ ephemeral: true });
+
         try {
             // Vérifier si l’utilisateur a déjà le rôle
             if (interaction.member.roles.cache.has(roleId)) {
                 // Retirer le rôle
+                console.log(`Retrait du rôle : ${role.name} (${role.id})`);
                 await interaction.member.roles.remove(role);
-                await interaction.reply({
+                await interaction.editReply({
                     content: `Le rôle ${role.name} a été retiré.`,
                     ephemeral: true
                 });
             } else {
                 // Ajouter le rôle
+                console.log(`Ajout du rôle : ${role.name} (${role.id})`);
                 await interaction.member.roles.add(role);
-                await interaction.reply({
+                await interaction.editReply({
                     content: `Vous avez maintenant le rôle : ${role.name}.`,
                     ephemeral: true
                 });
             }
         } catch (error) {
-            console.error('Erreur lors de la gestion des rôles :', error);
-            await interaction.reply({
+            console.error('Erreur lors de la gestion des rôles :', error.message, error.stack);
+            await interaction.editReply({
                 content: 'Une erreur est survenue lors de la modification de vos rôles.',
                 ephemeral: true
             });

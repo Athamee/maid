@@ -59,7 +59,6 @@ module.exports = {
             await interaction.editReply({ content: 'Les boutons de sélection d’expérience vanille ont été envoyés.', ephemeral: true });
         } catch (error) {
             console.error('Erreur lors de l\'exécution de la commande :', error);
-            // Gérer les erreurs si la réponse n’a pas encore été envoyée
             if (!interaction.replied) {
                 await interaction.editReply({
                     content: 'Une erreur est survenue.',
@@ -84,6 +83,9 @@ module.exports = {
             });
         }
 
+        // Différer la réponse immédiatement pour éviter les timeouts
+        await interaction.deferReply({ ephemeral: true });
+
         // Liste des rôles d’expérience vanille
         const experienceRoles = [
             process.env.XPVANILLA25_ROLE_ID,
@@ -97,25 +99,37 @@ module.exports = {
         try {
             // Retirer le rôle d’expérience vanille existant s’il y en a un
             if (existingExperienceRole) {
+                console.log(`Retrait du rôle existant : ${existingExperienceRole.name} (${existingExperienceRole.id})`);
                 await interaction.member.roles.remove(existingExperienceRole);
-                await interaction.reply({
-                    content: `Votre rôle précédent (${existingExperienceRole.name}) a été retiré.`,
-                    ephemeral: true
+                await interaction.editReply({
+                    content: `Votre rôle précédent (${existingExperienceRole.name}) a été retiré.`
+                });
+            } else {
+                console.log('Aucun rôle d’expérience vanille existant trouvé.');
+                await interaction.editReply({
+                    content: 'Aucun rôle d’expérience vanille précédent à retirer.'
                 });
             }
 
             // Ajouter le nouveau rôle
+            console.log(`Ajout du rôle : ${role.name} (${role.id})`);
             await interaction.member.roles.add(role);
             await interaction.followUp({
                 content: `Vous avez maintenant le rôle : ${role.name}.`,
                 ephemeral: true
             });
         } catch (error) {
-            console.error('Erreur lors de la gestion des rôles :', error);
-            await interaction.reply({
-                content: 'Une erreur est survenue lors de la modification de vos rôles.',
-                ephemeral: true
-            });
+            console.error('Erreur lors de la gestion des rôles :', error.message, error.stack);
+            if (interaction.replied) {
+                await interaction.followUp({
+                    content: 'Une erreur est survenue lors de la modification de vos rôles.',
+                    ephemeral: true
+                });
+            } else {
+                await interaction.editReply({
+                    content: 'Une erreur est survenue lors de la modification de vos rôles.'
+                });
+            }
         }
     }
 };
