@@ -5,8 +5,7 @@ const {
     ActionRowBuilder, 
     StringSelectMenuBuilder, 
     AttachmentBuilder, 
-    EmbedBuilder,
-    InteractionResponseFlags
+    EmbedBuilder
 } = require('discord.js');
 const path = require('path');
 const fs = require('fs').promises;
@@ -24,7 +23,7 @@ module.exports = {
             console.log(`Début de /ticket-menu par ${interaction.member.user.tag}`);
 
             // Différer la réponse
-            await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral });
+            await interaction.deferReply({ ephemeral: true });
             console.log('deferReply envoyé');
 
             // Vérifier l’existence de l’image
@@ -78,7 +77,7 @@ module.exports = {
             // Confirmation
             await interaction.editReply({
                 content: 'Le menu pour ouvrir un ticket a été envoyé avec succès.',
-                flags: InteractionResponseFlags.Ephemeral
+                ephemeral: true
             });
             console.log('editReply envoyé');
 
@@ -87,7 +86,7 @@ module.exports = {
             try {
                 await interaction.editReply({
                     content: `Erreur lors de l’envoi du menu : ${error.message}`,
-                    flags: InteractionResponseFlags.Ephemeral
+                    ephemeral: true
                 });
                 console.log('editReply erreur envoyé');
             } catch (replyError) {
@@ -114,7 +113,7 @@ module.exports = {
 
         try {
             // Différer la réponse
-            await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral });
+            await interaction.deferReply({ ephemeral: true });
             console.log('deferReply envoyé dans handleMenuInteraction');
 
             // Messages personnalisés pour chaque type de ticket
@@ -154,7 +153,7 @@ module.exports = {
             // Confirmation
             await interaction.editReply({
                 content: 'Votre ticket a été créé avec succès.',
-                flags: InteractionResponseFlags.Ephemeral
+                ephemeral: true
             });
             console.log('editReply envoyé dans handleMenuInteraction');
 
@@ -163,7 +162,7 @@ module.exports = {
             try {
                 await interaction.editReply({
                     content: `Erreur lors de la création du ticket : ${error.message}`,
-                    flags: InteractionResponseFlags.Ephemeral
+                    ephemeral: true
                 });
                 console.log('editReply erreur envoyé dans handleMenuInteraction');
             } catch (replyError) {
@@ -185,7 +184,7 @@ module.exports = {
         console.log(`Bouton close_ticket cliqué par ${interaction.member.user.tag}`);
         try {
             // Différer la réponse
-            await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral });
+            await interaction.deferReply({ ephemeral: true });
             console.log('deferReply envoyé dans handleCloseTicket');
 
             // Vérifier permissions utilisateur
@@ -198,7 +197,7 @@ module.exports = {
                 console.warn(`[Permissions] ${member.user.tag} a essayé de fermer un ticket sans permission`);
                 await interaction.editReply({
                     content: 'Vous n\'avez pas la permission de fermer ce ticket.',
-                    flags: InteractionResponseFlags.Ephemeral
+                    ephemeral: true
                 });
                 return;
             }
@@ -218,7 +217,7 @@ module.exports = {
             // Confirmer fermeture
             await interaction.editReply({
                 content: 'Ticket fermé avec succès.',
-                flags: InteractionResponseFlags.Ephemeral
+                ephemeral: true
             });
             console.log(`Ticket ${channel.name} fermé par ${member.user.tag}`);
 
@@ -227,7 +226,7 @@ module.exports = {
             try {
                 await interaction.editReply({
                     content: `Erreur lors de la fermeture du ticket : ${error.message}`,
-                    flags: InteractionResponseFlags.Ephemeral
+                    ephemeral: true
                 });
                 console.log('editReply erreur envoyé dans handleCloseTicket');
             } catch (replyError) {

@@ -285,6 +285,7 @@ client.on('interactionCreate', async interaction => {
 
             // Gestion des boutons spécifiques
             const ticketCommand = client.commands.get('ticket');
+            const ticketMenuCommand = client.commands.get('ticket-menu');
 
             if (interaction.customId === 'ticket_type_6' && ticketCommand) {
                 // Bouton pour créer un ticket (ticket.js)
@@ -297,13 +298,16 @@ client.on('interactionCreate', async interaction => {
                 return;
             }
 
-            if (interaction.customId === 'close_ticket' && ticketCommand) {
-                // Bouton pour fermer un ticket (ticket.js)
-                if (ticketCommand.handleCloseTicket) {
+            if (interaction.customId === 'close_ticket') {
+                // Bouton pour fermer un ticket (ticket.js ou ticketmenu.js)
+                if (ticketCommand && ticketCommand.handleCloseTicket) {
                     console.log(`Appel de handleCloseTicket pour ticket.js`);
                     await ticketCommand.handleCloseTicket(interaction);
+                } else if (ticketMenuCommand && ticketMenuCommand.handleCloseTicket) {
+                    console.log(`Appel de handleCloseTicket pour ticketmenu.js`);
+                    await ticketMenuCommand.handleCloseTicket(interaction);
                 } else {
-                    console.warn(`handleCloseTicket manquant pour ticket.js`);
+                    console.warn(`Aucune méthode handleCloseTicket trouvée pour close_ticket`);
                     await interaction.reply({ content: 'Commande de fermeture non configurée.', ephemeral: true });
                 }
                 return;
@@ -338,6 +342,21 @@ client.on('interactionCreate', async interaction => {
             // Bouton non reconnu
             console.warn(`Bouton non géré : ${interaction.customId}`);
             await interaction.reply({ content: 'Bouton non reconnu.', ephemeral: true });
+        }
+
+        if (interaction.isStringSelectMenu()) {
+            // Log du menu déroulant
+            console.log(`Menu déroulant cliqué : ${interaction.customId} par ${interaction.user.tag}`);
+
+            // Gestion du menu ticket-menu
+            const ticketMenuCommand = client.commands.get('ticket-menu');
+            if (interaction.customId === 'select_ticket' && ticketMenuCommand && ticketMenuCommand.handleMenuInteraction) {
+                console.log(`Appel de handleMenuInteraction pour ticketmenu.js`);
+                await ticketMenuCommand.handleMenuInteraction(interaction);
+            } else {
+                console.warn(`Menu non géré : ${interaction.customId}`);
+                await interaction.reply({ content: 'Menu non reconnu.', ephemeral: true });
+            }
         }
     } catch (error) {
         console.error('Erreur lors de l’interaction :', error.message, error.stack);
