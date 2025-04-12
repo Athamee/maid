@@ -67,7 +67,7 @@ async function loadEvents() {
     const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
 
     for (const file of eventFiles) {
-        const filePath = path.join(eventsPath, file); // Corrigé : eventsPath
+        const filePath = path.join(eventsPath, file);
         try {
             const event = require(filePath);
             if (event.once) {
@@ -282,7 +282,11 @@ client.on('interactionCreate', async interaction => {
 
                 if (
                     (name === 'reglement' && interaction.customId === 'accept_reglement') ||
-                    (name === 'ticket' && (interaction.customId === 'create_ticket' || interaction.customId === 'close_ticket')) ||
+                    (name === 'ticket' && (
+                        interaction.customId === 'create_ticket' ||
+                        interaction.customId === 'close_ticket' ||
+                        interaction.customId === 'ticket_type_6' // Ajouté
+                    )) ||
                     (name === 'role-genre' && interaction.customId.startsWith('genre_')) ||
                     (name === 'role-pronom' && interaction.customId.startsWith('pronom_')) ||
                     (name === 'role-age' && interaction.customId.startsWith('age_')) ||
