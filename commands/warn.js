@@ -29,10 +29,10 @@ module.exports = {
         try {
             // Insérer le warn dans la DB
             await pool.query(
-                'INSERT INTO warns (user_id, guild_id, reason, moderator_id) VALUES ($1, $2, $3, $4)',
-                [target.id, interaction.guild.id, reason, interaction.user.id]
+                'INSERT INTO warns (user_id, guild_id, reason, moderator_id, timestamp) VALUES ($1, $2, $3, $4, $5)',
+                [target.id, interaction.guild.id, reason, interaction.user.id, Math.floor(Date.now() / 1000)]
             );
-            console.log(`Warn pour ${target.tag} par ${interaction.user.tag} (raison : ${reason})`);
+            console.log(`[Warn] Warn pour ${target.tag} par ${interaction.user.tag} (raison : ${reason})`);
 
             // Compter les warns
             const warnCountResult = await pool.query(
@@ -41,25 +41,25 @@ module.exports = {
             );
             const warnCount = parseInt(warnCountResult.rows[0].count, 10);
 
-            // Envoyer le message dans le salon PILORI_CHANNEL_ID pour chaque warn
+            // Envoyer le message dans PILORI_CHANNEL_ID pour chaque warn
             const piloriChannelId = process.env.PILORI_CHANNEL_ID;
             const piloriChannel = interaction.guild.channels.cache.get(piloriChannelId);
 
             if (piloriChannel && piloriChannel.isTextBased()) {
                 const piloriMessage = `Le membre <@${target.id}> a reçu un warn pour la raison suivante : ${reason}.`;
                 await piloriChannel.send(piloriMessage);
-                console.log(`Message envoyé dans #${piloriChannel.name} : ${piloriMessage}`);
+                console.log(`[Warn] Message envoyé dans #${piloriChannel.name} : ${piloriMessage}`);
             } else {
-                console.error(`Erreur : Salon PILORI_CHANNEL_ID (${piloriChannelId}) introuvable ou non texte.`);
+                console.error(`[Warn] Erreur : Salon PILORI_CHANNEL_ID (${piloriChannelId}) introuvable ou non texte.`);
             }
 
-            // Vérifier si 3 warns pour attribuer le rôle et envoyer le message dans WARN_CHANNEL_ID
+            // Vérifier si 3 warns pour gérer les rôles et envoyer le message
             if (warnCount >= 3) {
                 const warnedRoleId = process.env.WARNED_ROLE_ID;
                 const warnedRole = interaction.guild.roles.cache.get(warnedRoleId);
 
                 if (!warnedRole) {
-                    console.error(`Erreur : Le rôle WARNED_ROLE_ID (${warnedRoleId}) est introuvable.`);
+                    console.error(`[Warn] Erreur : Le rôle WARNED_ROLE_ID (${warnedRoleId}) est introuvable.`);
                     await interaction.reply({
                         content: `${target.tag} averti pour : ${reason} (${warnCount}/3). Attention : le rôle à 3 warns est introuvable.`,
                         ephemeral: true
@@ -67,45 +67,64 @@ module.exports = {
                     return;
                 }
 
-                // Ajouter le rôle si pas déjà présent
+                let actions = [];
+                let removedRoles = [];
+
+                // Ajouter le rôle warned si pas déjà présent
                 if (!targetMember.roles.cache.has(warnedRoleId)) {
-                    console.log(`Ajout du rôle ${warnedRole.name} (${warnedRoleId}) à ${target.tag} (${target.id}) pour 3 warns`);
                     await targetMember.roles.add(warnedRole);
-
-                    // Envoyer le message personnalisé dans WARN_CHANNEL_ID
-                    const warnChannelId = process.env.WARN_CHANNEL_ID;
-                    const warnChannel = interaction.guild.channels.cache.get(warnChannelId);
-
-                    if (warnChannel && warnChannel.isTextBased()) {
-                        // Récupérer les rôles gaystapo et dicktateur
-                        const gaystapoRole = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === 'gaystapo') || process.env.GAYSTAPO_ROLE_ID
-                            ? interaction.guild.roles.cache.get(process.env.GAYSTAPO_ROLE_ID)
-                            : null;
-                        const dicktateurRole = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === 'dicktateur') || process.env.DICKTATEUR_ROLE_ID
-                            ? interaction.guild.roles.cache.get(process.env.DICKTATEUR_ROLE_ID)
-                            : null;
-
-                        const gaystapoMention = gaystapoRole ? `<@&${gaystapoRole.id}>` : '@1094318706487734483';
-                        const dicktateurMention = dicktateurRole ? `<@&${dicktateurRole.id}>` : '@1094318706525470901';
-
-                        const warnMessage = `<@${target.id}>, tu viens de te faire warn pour la troisième fois. Le dernier warn était pour ${reason}.\nUn ${gaystapoMention} ou ${dicktateurMention} viendra bientôt s'occuper de ton cas.`;
-
-                        await warnChannel.send(warnMessage);
-                        console.log(`Message envoyé dans #${warnChannel.name} : ${warnMessage}`);
-                    } else {
-                        console.error(`Erreur : Salon WARN_CHANNEL_ID (${warnChannelId}) introuvable ou non texte.`);
-                    }
-
-                    await interaction.reply({
-                        content: `${target.tag} averti pour : ${reason} (${warnCount}/3). Rôle ${warnedRole.name} attribué.`,
-                        ephemeral: true
-                    });
-                } else {
-                    await interaction.reply({
-                        content: `${target.tag} averti pour : ${reason} (${warnCount}/3). Le rôle ${warnedRole.name} est déjà attribué.`,
-                        ephemeral: true
-                    });
+                    actions.push(`rôle ${warnedRole.name} attribué`);
+                    console.log(`[Warn] Ajout du rôle ${warnedRole.name} (${warnedRoleId}) à ${target.tag} (${target.id})`);
                 }
+
+                // Liste des rôles à retirer
+                const rolesToRemove = [
+                    { id: process.env.CERTIFIE_ROLE_ID, name: 'Certifié' },
+                    { id: process.env.DM_ROLE_ID, name: 'DM' },
+                    { id: process.env.GALERIE_ROLE_ID, name: 'Galerie' },
+                    { id: process.env.TORTURE_ROLE_ID, name: 'Torture' },
+                    { id: process.env.MEMBRE_ROLE_ID, name: 'Membre' }
+                ];
+
+                // Retirer les rôles s’ils existent
+                for (const role of rolesToRemove) {
+                    const roleObj = role.id && interaction.guild.roles.cache.get(role.id);
+                    if (roleObj && targetMember.roles.cache.has(role.id)) {
+                        await targetMember.roles.remove(roleObj);
+                        actions.push(`rôle ${roleObj.name} retiré`);
+                        removedRoles.push(role.id);
+                        console.log(`[Warn] Retrait du rôle ${roleObj.name} (${role.id}) de ${target.tag} (${target.id})`);
+                    } else if (role.id && !roleObj) {
+                        console.error(`[Warn] Erreur : Le rôle ${role.name} (${role.id}) est introuvable.`);
+                    }
+                }
+
+                // Stocker les rôles retirés dans warn_removed_roles
+                if (removedRoles.length > 0) {
+                    await pool.query(
+                        'INSERT INTO warn_removed_roles (guild_id, user_id, removed_roles) VALUES ($1, $2, $3) ' +
+                        'ON CONFLICT (guild_id, user_id) DO UPDATE SET removed_roles = $3',
+                        [interaction.guild.id, target.id, JSON.stringify(removedRoles)]
+                    );
+                    console.log(`[Warn] Rôles retirés stockés pour ${target.tag} : ${removedRoles.join(', ')}`);
+                }
+
+                // Envoyer le message dans WARN_CHANNEL_ID
+                const warnChannelId = process.env.WARN_CHANNEL_ID;
+                const warnChannel = interaction.guild.channels.cache.get(warnChannelId);
+
+                if (warnChannel && warnChannel.isTextBased()) {
+                    const warnMessage = `<@${target.id}>, tu viens de recevoir ton troisième warn pour : ${reason}.\nAu troisième warn, tu es désormais **isolé du serveur**. Un modérateur décidera de la suite.`;
+                    await warnChannel.send(warnMessage);
+                    console.log(`[Warn] Message envoyé dans #${warnChannel.name} : ${warnMessage}`);
+                } else {
+                    console.error(`[Warn] Erreur : Salon WARN_CHANNEL_ID (${warnChannelId}) introuvable ou non texte.`);
+                }
+
+                await interaction.reply({
+                    content: `${target.tag} averti pour : ${reason} (${warnCount}/3). ${actions.length > 0 ? actions.join(', ') + '.' : 'Aucune action supplémentaire.'}`,
+                    ephemeral: true
+                });
             } else {
                 await interaction.reply({
                     content: `${target.tag} averti pour : ${reason} (${warnCount}/3)`,
@@ -113,7 +132,7 @@ module.exports = {
                 });
             }
         } catch (error) {
-            console.error('Erreur lors du warn :', error.message, error.stack);
+            console.error('[Warn] Erreur lors du warn :', error.message, error.stack);
             await interaction.reply({ content: 'Erreur lors du warn.', ephemeral: true });
         }
     }

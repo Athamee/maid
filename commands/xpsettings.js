@@ -5,9 +5,8 @@ const { EmbedBuilder } = require('discord.js');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('xpsettings')
-        .setDescription('Régler ou voir les gains d’XP (admins uniquement)')
+        .setDescription('Régler ou voir les gains d’XP et paramètres (admins uniquement)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-        // Commandes existantes
         .addSubcommand(subcommand =>
             subcommand.setName('set-message').setDescription('Définir l’XP par message')
                 .addIntegerOption(option => option.setName('xp').setDescription('Valeur d’XP par message').setRequired(true).setMinValue(0))
@@ -51,6 +50,17 @@ module.exports = {
                 .addStringOption(option => option.setName('message').setDescription('Message avec {level} et {user}').setRequired(true))
         )
         .addSubcommand(subcommand =>
+            subcommand.setName('set-spam').setDescription('Configurer le filtre anti-spam')
+                .addIntegerOption(option => option.setName('message_limit').setDescription('Max messages dans le temps imparti').setRequired(true).setMinValue(1))
+                .addIntegerOption(option => option.setName('time_window').setDescription('Fenêtre temporelle (secondes)').setRequired(true).setMinValue(1))
+                .addIntegerOption(option => option.setName('repeat_limit').setDescription('Max messages identiques').setRequired(true).setMinValue(1))
+                .addIntegerOption(option => option.setName('mention_limit').setDescription('Max mentions par message').setRequired(true).setMinValue(1))
+                .addStringOption(option => option.setName('action').setDescription('Action à prendre').setRequired(true)
+                    .addChoices(
+                        { name: 'Avertir', value: 'warn' }
+                    ))
+        )
+        .addSubcommand(subcommand =>
             subcommand.setName('view').setDescription('Voir les paramètres actuels d’XP')
         )
         .addSubcommand(subcommand =>
@@ -68,6 +78,13 @@ module.exports = {
         )
         .addSubcommand(subcommand =>
             subcommand.setName('clear-default-message').setDescription('Réinitialiser le message par défaut')
+        )
+        .addSubcommand(subcommand =>
+            subcommand.setName('clear-spam').setDescription('Réinitialiser les paramètres anti-spam')
+        )
+        .addSubcommand(subcommand =>
+            subcommand.setName('clear-voice-role').setDescription('Supprimer l’association rôle/salon vocal et le canal texte associé')
+                .addChannelOption(option => option.setName('voice_channel').setDescription('Salon vocal à nettoyer').setRequired(true))
         ),
 
     async execute(interaction) {
@@ -114,20 +131,20 @@ module.exports = {
                     const voiceChannel = interaction.options.getChannel('voice_channel');
                     const role = interaction.options.getRole('role');
                     const textChannel = await interaction.guild.channels.create({
-                        name: voiceChannel.name, // Même nom que le canal vocal, sans "vocal-"
-                        type: 0, // Canal textuel
-                        parent: voiceChannel.parentId, // Placer dans la même catégorie que le canal vocal
+                        name: voiceChannel.name,
+                        type: 0,
+                        parent: voiceChannel.parentId,
                         permissionOverwrites: [
-                            { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] }, // Tout le monde ne voit pas
-                            { 
-                                id: role.id, 
+                            { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+                            {
+                                id: role.id,
                                 allow: [
-                                    PermissionFlagsBits.ViewChannel,         // Voir le canal
-                                    PermissionFlagsBits.SendMessages,        // Envoyer des messages
-                                    PermissionFlagsBits.ReadMessageHistory,  // Lire l’historique
-                                    PermissionFlagsBits.AddReactions,        // Ajouter des réactions
-                                    PermissionFlagsBits.EmbedLinks,          // Inclure des liens
-                                    PermissionFlagsBits.UseExternalEmojis    // Utiliser des emojis externes
+                                    PermissionFlagsBits.ViewChannel,
+                                    PermissionFlagsBits.SendMessages,
+                                    PermissionFlagsBits.ReadMessageHistory,
+                                    PermissionFlagsBits.AddReactions,
+                                    PermissionFlagsBits.EmbedLinks,
+                                    PermissionFlagsBits.UseExternalEmojis
                                 ]
                             }
                         ]
@@ -148,6 +165,19 @@ module.exports = {
                         [guildId, message]
                     );
                     await interaction.reply({ content: `Message par défaut défini : "${message}"`, ephemeral: true });
+                } else if (subcommand === 'set-spam') {
+                    const spamSettings = {
+                        message_limit: interaction.options.getInteger('message_limit'),
+                        time_window: interaction.options.getInteger('time_window') * 1000, // Convertir en ms
+                        repeat_limit: interaction.options.getInteger('repeat_limit'),
+                        mention_limit: interaction.options.getInteger('mention_limit'),
+                        action: interaction.options.getString('action')
+                    };
+                    await pool.query(
+                        'INSERT INTO xp_settings (guild_id, spam_settings) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET spam_settings = $2',
+                        [guildId, JSON.stringify(spamSettings)]
+                    );
+                    await interaction.reply({ content: `Filtre anti-spam configuré : ${spamSettings.message_limit} messages en ${spamSettings.time_window / 1000}s, ${spamSettings.repeat_limit} répétés, ${spamSettings.mention_limit} mentions, action: ${spamSettings.action}.`, ephemeral: true });
                 } else {
                     const xpValue = interaction.options.getInteger('xp');
                     let column;
@@ -201,6 +231,36 @@ module.exports = {
                         [guildId, 'Félicitations {user}, tu es désormais niveau {level} ! Continue d’explorer tes désirs intimes sur le Donjon. 😈']
                     );
                     await interaction.reply({ content: 'Le message par défaut a été réinitialisé à sa valeur initiale.', ephemeral: true });
+                } else if (subcommand === 'clear-spam') {
+                    await pool.query(
+                        'INSERT INTO xp_settings (guild_id, spam_settings) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET spam_settings = $2',
+                        [guildId, '{}']
+                    );
+                    await interaction.reply({ content: 'Les paramètres anti-spam ont été réinitialisés.', ephemeral: true });
+                } else if (subcommand === 'clear-voice-role') {
+                    const voiceChannel = interaction.options.getChannel('voice_channel');
+                    const result = await pool.query(
+                        'DELETE FROM voice_role_settings WHERE guild_id = $1 AND voice_channel_id = $2 RETURNING text_channel_id',
+                        [guildId, voiceChannel.id]
+                    );
+
+                    if (result.rowCount === 0) {
+                        return interaction.reply({ content: `Aucune association trouvée pour le salon vocal ${voiceChannel}.`, ephemeral: true });
+                    }
+
+                    const textChannelId = result.rows[0].text_channel_id;
+                    const textChannel = interaction.guild.channels.cache.get(textChannelId);
+
+                    if (textChannel) {
+                        try {
+                            await textChannel.delete();
+                            console.log(`[xpsettings] Canal texte ${textChannel.name} (${textChannelId}) supprimé pour ${voiceChannel.name}`);
+                        } catch (error) {
+                            console.error(`[xpsettings] Erreur lors de la suppression du canal texte ${textChannelId} :`, error.message);
+                        }
+                    }
+
+                    await interaction.reply({ content: `Association pour ${voiceChannel} supprimée.${textChannel ? ` Canal texte ${textChannel.name} également supprimé.` : ''}`, ephemeral: true });
                 }
             } else if (subcommand === 'view') {
                 const xpSettingsResult = await pool.query('SELECT * FROM xp_settings WHERE guild_id = $1', [guildId]);
@@ -212,11 +272,13 @@ module.exports = {
                     level_up_channel: null,
                     excluded_roles: '[]',
                     no_camera_channels: '[]',
+                    spam_settings: '{}',
                     default_level_message: 'Félicitations {user}, tu es désormais niveau {level} ! Continue d’explorer tes désirs intimes sur le Donjon. 😈'
                 };
 
                 const excludedRoles = JSON.parse(xpSettings.excluded_roles || '[]');
                 const noCameraChannels = JSON.parse(xpSettings.no_camera_channels || '[]');
+                const spamSettings = JSON.parse(xpSettings.spam_settings || '{}');
 
                 const voiceRoleResult = await pool.query('SELECT * FROM voice_role_settings WHERE guild_id = $1', [guildId]);
                 const voiceRoleSettings = voiceRoleResult.rows;
@@ -238,24 +300,31 @@ module.exports = {
                         { name: 'Salon des niveaux', value: xpSettings.level_up_channel ? `<#${xpSettings.level_up_channel}>` : 'Non défini', inline: true },
                         { name: 'Rôles exclus', value: excludedRoles.length > 0 ? excludedRoles.map(id => `<@&${id}>`).join(', ') : 'Aucun', inline: true },
                         { name: 'Salons sans caméra', value: noCameraChannels.length > 0 ? noCameraChannels.map(id => `<#${id}>`).join(', ') : 'Aucun', inline: true },
-                        { 
-                            name: 'Rôles vocaux', 
-                            value: voiceRoleSettings.length > 0 
-                                ? voiceRoleSettings.map(v => `<#${v.voice_channel_id}> : <@&${v.role_id}> (texte: <#${v.text_channel_id}>)`).join('\n') 
-                                : 'Aucun', 
-                            inline: false 
+                        {
+                            name: 'Anti-spam',
+                            value: spamSettings.message_limit
+                                ? `${spamSettings.message_limit} messages en ${spamSettings.time_window / 1000}s, ${spamSettings.repeat_limit} répétés, ${spamSettings.mention_limit} mentions, action: ${spamSettings.action}`
+                                : 'Non configuré',
+                            inline: true
                         },
-                        { 
-                            name: 'Message par défaut', 
-                            value: xpSettings.default_level_message, 
-                            inline: false 
+                        {
+                            name: 'Rôles vocaux',
+                            value: voiceRoleSettings.length > 0
+                                ? voiceRoleSettings.map(v => `<#${v.voice_channel_id}> : <@&${v.role_id}> (texte: <#${v.text_channel_id}>)`).join('\n')
+                                : 'Aucun',
+                            inline: false
                         },
-                        { 
-                            name: 'Messages de niveau personnalisés', 
-                            value: levelMessages.length > 0 
-                                ? levelMessages.map(m => `Niveau ${m.level} : ${m.message}`).join('\n') 
-                                : 'Aucun message personnalisé défini', 
-                            inline: false 
+                        {
+                            name: 'Message par défaut',
+                            value: xpSettings.default_level_message,
+                            inline: false
+                        },
+                        {
+                            name: 'Messages de niveau personnalisés',
+                            value: levelMessages.length > 0
+                                ? levelMessages.map(m => `Niveau ${m.level} : ${m.message}`).join('\n')
+                                : 'Aucun message personnalisé défini',
+                            inline: false
                         }
                     );
 

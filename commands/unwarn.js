@@ -1,4 +1,3 @@
-// unwarn.js
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { PermissionFlagsBits } = require('discord.js');
 const pool = require('../db');
@@ -21,7 +20,7 @@ module.exports = {
         }
 
         const targetUser = interaction.options.getUser('user');
-        const reset = interaction.options.getBoolean('reset') ?? false; // Par défaut : false (un warn)
+        const reset = interaction.options.getBoolean('reset') ?? false;
         const targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
 
         try {
@@ -56,7 +55,7 @@ module.exports = {
                     content: `${messageContent} Membre introuvable sur le serveur.`,
                     ephemeral: true
                 });
-                console.log(`${reset ? 'Tous les warns' : 'Warn'} retirés par ${interaction.user.tag} pour ${targetUser.id}`);
+                console.log(`[Unwarn] ${reset ? 'Tous les warns' : 'Warn'} retirés par ${interaction.user.tag} pour ${targetUser.id}`);
                 return;
             }
 
@@ -67,36 +66,81 @@ module.exports = {
             );
             const warnCount = parseInt(warnCountResult.rows[0].count, 10);
 
+            // Actions pour le rôle et restauration
+            let actions = [reset ? 'tous les warns retirés' : 'warn retiré'];
+
             // Vérifier si le rôle WARNED_ROLE_ID doit être retiré
             const warnedRoleId = process.env.WARNED_ROLE_ID;
             const warnedRole = interaction.guild.roles.cache.get(warnedRoleId);
 
-            if (warnCount < 3 && targetMember.roles.cache.has(warnedRoleId)) {
-                if (!warnedRole) {
-                    console.error(`Erreur : Le rôle WARNED_ROLE_ID (${warnedRoleId}) est introuvable.`);
-                    await interaction.reply({
-                        content: `${messageContent} Attention : le rôle Warned est introuvable.`,
-                        ephemeral: true
-                    });
-                    return;
+            if (warnCount < 3) {
+                // Retirer le rôle Warned
+                if (warnedRole && targetMember.roles.cache.has(warnedRoleId)) {
+                    await targetMember.roles.remove(warnedRole);
+                    actions.push(`rôle ${warnedRole.name} retiré`);
+                    console.log(`[Unwarn] Retrait du rôle ${warnedRole.name} (${warnedRoleId}) pour ${targetMember.user.tag} (${targetUser.id}) : ${warnCount} warns restants`);
+                } else if (!warnedRole) {
+                    console.error(`[Unwarn] Erreur : Le rôle WARNED_ROLE_ID (${warnedRoleId}) est introuvable.`);
                 }
 
-                console.log(`Retrait du rôle ${warnedRole.name} (${warnedRoleId}) pour ${targetMember.user.tag} (${targetUser.id}) : ${warnCount} warns restants`);
-                await targetMember.roles.remove(warnedRole);
-                await interaction.reply({
-                    content: `${messageContent} Rôle ${warnedRole.name} retiré (${warnCount}/3).`,
-                    ephemeral: true
-                });
-            } else {
-                await interaction.reply({
-                    content: `${messageContent} ${warnCount}/3 warns restants.`,
-                    ephemeral: true
-                });
+                // Restaurer les rôles depuis warn_removed_roles
+                const rolesResult = await pool.query(
+                    'SELECT removed_roles FROM warn_removed_roles WHERE guild_id = $1 AND user_id = $2',
+                    [interaction.guild.id, targetUser.id]
+                );
+                const removedRoles = rolesResult.rows[0] ? JSON.parse(rolesResult.rows[0].removed_roles) : [];
+
+                if (removedRoles.length > 0) {
+                    const rolesToRestore = [
+                        { id: process.env.CERTIFIE_ROLE_ID, name: 'Certifié' },
+                        { id: process.env.DM_ROLE_ID, name: 'DM' },
+                        { id: process.env.GALERIE_ROLE_ID, name: 'Galerie' },
+                        { id: process.env.TORTURE_ROLE_ID, name: 'Torture' },
+                        { id: process.env.MEMBRE_ROLE_ID, name: 'Membre' }
+                    ];
+
+                    for (const role of rolesToRestore) {
+                        if (removedRoles.includes(role.id)) {
+                            const roleObj = role.id && interaction.guild.roles.cache.get(role.id);
+                            if (roleObj && !targetMember.roles.cache.has(role.id)) {
+                                await targetMember.roles.add(roleObj);
+                                actions.push(`rôle ${roleObj.name} restauré`);
+                                console.log(`[Unwarn] Restauration du rôle ${roleObj.name} (${role.id}) pour ${targetMember.user.tag} (${targetUser.id})`);
+                            } else if (role.id && !roleObj) {
+                                console.error(`[Unwarn] Erreur : Le rôle ${role.name} (${role.id}) est introuvable.`);
+                            }
+                        }
+                    }
+                }
+
+                // Supprimer l’entrée de warn_removed_roles
+                await pool.query(
+                    'DELETE FROM warn_removed_roles WHERE guild_id = $1 AND user_id = $2',
+                    [interaction.guild.id, targetUser.id]
+                );
+                console.log(`[Unwarn] Entrée warn_removed_roles supprimée pour ${targetUser.tag}`);
             }
 
-            console.log(`${reset ? 'Tous les warns' : 'Warn'} retirés par ${interaction.user.tag} pour ${targetUser.id}`);
+            // Envoyer le message dans PILORI_CHANNEL_ID
+            const piloriChannelId = process.env.PILORI_CHANNEL_ID;
+            const piloriChannel = interaction.guild.channels.cache.get(piloriChannelId);
+
+            if (piloriChannel && piloriChannel.isTextBased()) {
+                const piloriMessage = `${messageContent} Warns restants : ${warnCount}.`;
+                await piloriChannel.send(piloriMessage);
+                console.log(`[Unwarn] Message envoyé dans #${piloriChannel.name} : ${piloriMessage}`);
+            } else {
+                console.error(`[Unwarn] Erreur : Salon PILORI_CHANNEL_ID (${piloriChannelId}) introuvable ou non texte.`);
+            }
+
+            await interaction.reply({
+                content: `${messageContent} ${actions.length > 1 ? actions.join(', ') + '.' : ''} Warns restants : ${warnCount}/3.`,
+                ephemeral: true
+            });
+
+            console.log(`[Unwarn] ${reset ? 'Tous les warns' : 'Warn'} retirés par ${interaction.user.tag} pour ${targetUser.id}`);
         } catch (error) {
-            console.error('Erreur lors du unwarn :', error.message, error.stack);
+            console.error('[Unwarn] Erreur lors du unwarn :', error.message, error.stack);
             await interaction.reply({ content: 'Erreur lors du retrait du warn.', ephemeral: true });
         }
     }

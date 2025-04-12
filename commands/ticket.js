@@ -114,7 +114,7 @@ module.exports = {
                     .setColor('#FFAA00');
 
                 // Créer le ticket
-                await ticketUtils.createTicketChannel(interaction.client, guild, member, 'Nouveau', {
+                await ticketUtils.createTicketChannel(interaction.client, guild, member, {
                     content: `<@${member.id}>, <@&1094318706487734483>`,
                     embeds: [embed],
                 });

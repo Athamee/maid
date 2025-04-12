@@ -133,7 +133,9 @@ async function initDatabase() {
                 image_xp INTEGER DEFAULT 15,
                 level_up_channel TEXT DEFAULT NULL,
                 excluded_roles TEXT DEFAULT '[]',
-                no_camera_channels TEXT DEFAULT '[]'
+                no_camera_channels TEXT DEFAULT '[]',
+                spam_settings TEXT DEFAULT '{}',
+                default_level_message TEXT DEFAULT 'Félicitations {user}, tu es désormais niveau {level} ! Continue d''explorer tes désirs intimes sur le Donjon. 😈'
             )
         `);
         await pool.query(`
@@ -154,70 +156,15 @@ async function initDatabase() {
             )
         `);
         await pool.query(`
-            DO $$
-            BEGIN
-                IF NOT EXISTS (
-                    SELECT 1 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'xp_settings' 
-                    AND column_name = 'default_level_message'
-                ) THEN
-                    ALTER TABLE xp_settings 
-                    ADD COLUMN default_level_message TEXT DEFAULT 'Félicitations {user}, tu es désormais niveau {level} ! Continue d''explorer tes désirs intimes sur le Donjon. 😈';
-                ELSE
-                    ALTER TABLE xp_settings 
-                    ALTER COLUMN default_level_message SET DEFAULT 'Félicitations {user}, tu es désormais niveau {level} ! Continue d''explorer tes désirs intimes sur le Donjon. 😈';
-                END IF;
-            END;
-            $$;
-        `);
-        await pool.query(`
-            DO $$
-            BEGIN
-                IF NOT EXISTS (
-                    SELECT 1 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'xp_settings' 
-                    AND column_name = 'level_up_channel'
-                ) THEN
-                    ALTER TABLE xp_settings 
-                    ADD COLUMN level_up_channel TEXT DEFAULT NULL;
-                END IF;
-            END;
-            $$;
-        `);
-        await pool.query(`
-            DO $$
-            BEGIN
-                IF NOT EXISTS (
-                    SELECT 1 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'xp_settings' 
-                    AND column_name = 'excluded_roles'
-                ) THEN
-                    ALTER TABLE xp_settings 
-                    ADD COLUMN excluded_roles TEXT DEFAULT '[]';
-                END IF;
-            END;
-            $$;
-        `);
-        await pool.query(`
-            DO $$
-            BEGIN
-                IF NOT EXISTS (
-                    SELECT 1 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'xp_settings' 
-                    AND column_name = 'no_camera_channels'
-                ) THEN
-                    ALTER TABLE xp_settings 
-                    ADD COLUMN no_camera_channels TEXT DEFAULT '[]';
-                END IF;
-            END;
-            $$;
+            CREATE TABLE IF NOT EXISTS warn_removed_roles (
+                guild_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                removed_roles TEXT DEFAULT '[]',
+                PRIMARY KEY (guild_id, user_id)
+            )
         `);
 
-        console.log('Tables warns, xp, xp_settings, level_up_messages et voice_role_settings prêtes avec toutes les migrations.');
+        console.log('Tables warns, xp, xp_settings, level_up_messages, voice_role_settings, warn_removed_roles prêtes.');
     } catch (error) {
         console.error('Erreur lors de l’initialisation de la base de données :', error.stack);
         throw error;
@@ -255,6 +202,7 @@ client.on('guildMemberRemove', async member => {
     try {
         await pool.query('DELETE FROM xp WHERE user_id = $1 AND guild_id = $2', [userId, guildId]);
         await pool.query('DELETE FROM warns WHERE user_id = $1 AND guild_id = $2', [userId, guildId]);
+        await pool.query('DELETE FROM warn_removed_roles WHERE user_id = $1 AND guild_id = $2', [userId, guildId]);
         console.log(`Membre ${userId} supprimé de la BD pour le serveur ${guildId}`);
     } catch (error) {
         console.error(`Erreur lors de la suppression du membre ${userId} de la BD :`, error.stack);

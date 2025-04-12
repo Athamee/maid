@@ -1,5 +1,5 @@
 // events/voiceCamera.js
-const { PermissionFlagsBits, ChannelType } = require('discord.js');
+const { PermissionFlagsBits, ChannelType, EmbedBuilder } = require('discord.js');
 const pool = require('../db');
 
 module.exports = {
@@ -40,21 +40,32 @@ module.exports = {
                             console.warn(`[VoiceCamera] Impossible d'envoyer DM à ${member.user.tag} :`, err.message);
                         });
 
-                        // Loguer sur le serveur de logs (si configuré)
+                        // Loguer sur le serveur de logs
                         const logGuildId = process.env.TICKET_LOG_GUILD_ID;
-                        const logMessagesId = process.env.LOG_VOCAL_ID;
-                        if (logGuildId && logMessagesId) {
+                        const logVocalId = process.env.LOG_VOCAL_ID;
+                        if (logGuildId && logVocalId) {
                             const logGuild = client.guilds.cache.get(logGuildId);
-                            const logChannel = logGuild?.channels.cache.get(logMessagesId);
-                            if (logChannel && logChannel.type === ChannelType.GuildText) {
-                                const embed = new EmbedBuilder()
-                                    .setTitle(`Caméra interdite utilisée`)
-                                    .setDescription(`**Membre** : <@${member.id}>\n**Salon** : <#${channel.id}>\n**Action** : Déconnecté\n**Quand** : <t:${Math.floor(Date.now() / 1000)}:R>`)
-                                    .setColor('#FF0000')
-                                    .setTimestamp();
-                                await logChannel.send({ embeds: [embed] });
-                                console.log(`[VoiceCamera] Log envoyé dans ${logChannel.name} (serveur ${logGuild.name})`);
+                            const logChannel = logGuild?.channels.cache.get(logVocalId);
+                            if (!logGuild) {
+                                console.error(`[VoiceCamera] Serveur de logs non trouvé : ${logGuildId}`);
+                                return;
                             }
+                            if (!logChannel || logChannel.type !== ChannelType.GuildText) {
+                                console.error(`[VoiceCamera] Salon logs-vocaux non trouvé ou invalide : ${logVocalId}`);
+                                return;
+                            }
+                            const perms = logChannel.permissionsFor(client.user);
+                            if (!perms.has([PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks])) {
+                                console.error(`[VoiceCamera] Permissions manquantes dans ${logChannel.name} :`, perms.toArray());
+                                return;
+                            }
+                            const embed = new EmbedBuilder()
+                                .setTitle(`Caméra interdite utilisée`)
+                                .setDescription(`**Membre** : <@${member.id}>\n**Salon** : <#${channel.id}>\n**Action** : Déconnecté\n**Quand** : <t:${Math.floor(Date.now() / 1000)}:R>`)
+                                .setColor('#FF0000')
+                                .setTimestamp();
+                            await logChannel.send({ embeds: [embed] });
+                            console.log(`[VoiceCamera] Log envoyé dans ${logChannel.name} (serveur ${logGuild.name})`);
                         }
                     } catch (error) {
                         console.error(`[VoiceCamera] Erreur lors de la déconnexion de ${member.user.tag} :`, error.message, error.stack);
