@@ -38,8 +38,8 @@ module.exports = {
                 { desc: "Sous collier", emoji: '<:dynamique_bdsm_sous_collier:1340036471934943332>', role: process.env.COLLIER_ROLE_ID },
                 { desc: "Mentorat", emoji: '<:dynamique_bdsm_mentorat:1340119674045599785>', role: process.env.MENTOR_ROLE_ID },
                 { desc: "Sous mentorat", emoji: '<:dynamique_bdsm_sous_mentorat:1340119681763377284>', role: process.env.MENTORAT_ROLE_ID },
-                { desc: "Protectorat", emoji: '<:dynamique_bdsm_protectorat:1340119677027749969>', role: process.env.PROTECTION_ROLE_ID },
-                { desc: "Sous protection", emoji: '<:dynamique_bdsm_sous_protectorat:1340119683906666617>', role: process.env.PROTECTORAT_ROLE_ID }
+                { desc: "Protectorat", emoji: '<:dynamique_bdsm_protectorat:1340119677027749969>', role: process.env.PROTECTORAT_ROLE_ID },
+                { desc: "Sous protection", emoji: '<:dynamique_bdsm_sous_protectorat:1340119683906666617>', role: process.env.PROTECTION_ROLE_ID }
             ];
 
             // Diviser les boutons en groupes de 5 max
