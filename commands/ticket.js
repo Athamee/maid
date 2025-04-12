@@ -60,16 +60,13 @@ module.exports = {
         if (interaction.customId === 'ticket_type_6') {
             console.log(`Bouton ticket_type_6 cliqué par ${interaction.member.user.tag}`);
             try {
-                await interaction.deferReply({ ephemeral: true }); // Ajouté
+                await interaction.deferReply({ ephemeral: true });
 
                 const ticketUtils = require('../utils/ticketUtils');
                 console.log('ticketUtils chargé dans handleButtonInteraction :', ticketUtils);
 
                 const member = interaction.member;
                 const guild = interaction.guild;
-
-                const mentionRoles = '<@&1323677074631950528>';
-                const content = `<@${member.id}>, ${mentionRoles}`;
 
                 const embed = new EmbedBuilder()
                     .setDescription(`
@@ -99,7 +96,7 @@ module.exports = {
                         ↳`)
                     .setColor('#FFAA00');
 
-                await ticketUtils.createTicketChannel(interaction.client, guild, member, {
+                await ticketUtils.createTicketChannel(interaction.client, guild, member, 'Nouveau', {
                     content: `<@${member.id}>, <@&1094318706487734483>`,
                     embeds: [embed],
                 });
@@ -123,7 +120,7 @@ module.exports = {
         if (interaction.customId === 'close_ticket') {
             console.log(`Bouton close_ticket cliqué par ${interaction.member.user.tag}`);
             try {
-                await interaction.deferReply({ ephemeral: true }); // Ajouté
+                await interaction.deferReply({ ephemeral: true });
 
                 const ticketUtils = require('../utils/ticketUtils');
                 console.log('ticketUtils chargé dans handleCloseTicket :', ticketUtils);
