@@ -1,3 +1,4 @@
+// role-membre.js
 const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, AttachmentBuilder } = require('discord.js');
 const path = require('path');
 
@@ -77,7 +78,7 @@ module.exports = {
         await interaction.deferReply({ ephemeral: true });
 
         try {
-            // Vérifier si l’utilisateur a déjà le rôle
+            // Vérifier si l’utilisateur a déjà le rôle membre
             if (interaction.member.roles.cache.has(roleId)) {
                 console.log(`L’utilisateur a déjà le rôle : ${role.name} (${role.id})`);
                 await interaction.editReply({
@@ -85,7 +86,17 @@ module.exports = {
                     ephemeral: true
                 });
             } else {
-                // Ajouter le rôle
+                // Retirer le rôle TAMPON_ROLE_ID s’il est présent
+                const tamponRoleId = process.env.TAMPON_ROLE_ID;
+                if (tamponRoleId && interaction.member.roles.cache.has(tamponRoleId)) {
+                    const tamponRole = interaction.guild.roles.cache.get(tamponRoleId);
+                    if (tamponRole) {
+                        console.log(`Retrait du rôle : ${tamponRole.name} (${tamponRoleId})`);
+                        await interaction.member.roles.remove(tamponRole);
+                    }
+                }
+
+                // Ajouter le rôle membre
                 console.log(`Ajout du rôle : ${role.name} (${role.id})`);
                 await interaction.member.roles.add(role);
                 await interaction.editReply({
