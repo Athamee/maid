@@ -264,6 +264,9 @@ client.on('guildMemberRemove', async member => {
 // Événement : gestion des interactions (commandes, boutons, menus déroulants)
 client.on('interactionCreate', async interaction => {
     try {
+        // Log de l’interaction pour debug
+        console.log(`Interaction reçue : type=${interaction.type}, customId=${interaction.customId || 'none'}, user=${interaction.user.tag}`);
+
         if (interaction.isCommand()) {
             // Gérer les commandes slash
             const command = client.commands.get(interaction.commandName);
@@ -273,23 +276,49 @@ client.on('interactionCreate', async interaction => {
             }
             console.log(`Commande exécutée : ${interaction.commandName} par ${interaction.user.tag}`);
             await command.execute(interaction);
+            return;
         }
 
         if (interaction.isButton()) {
             // Log du bouton cliqué
             console.log(`Bouton cliqué : ${interaction.customId} par ${interaction.user.tag}`);
 
-            // Gestion des boutons pour chaque commande
+            // Gestion des boutons spécifiques
+            const ticketCommand = client.commands.get('ticket');
+            const ticketMenuCommand = client.commands.get('ticket-menu');
+
+            if (interaction.customId === 'ticket_type_6' && ticketCommand) {
+                // Bouton pour créer un ticket (ticket.js)
+                if (ticketCommand.handleButtonInteraction) {
+                    console.log(`Appel de handleButtonInteraction pour ticket.js`);
+                    await ticketCommand.handleButtonInteraction(interaction);
+                } else {
+                    console.warn(`handleButtonInteraction manquant pour ticket.js`);
+                }
+                return;
+            }
+
+            if (interaction.customId === 'close_ticket') {
+                // Bouton pour fermer un ticket (ticket.js ou ticketmenu.js)
+                if (ticketCommand && ticketCommand.handleCloseTicket) {
+                    console.log(`Appel de handleCloseTicket pour ticket.js`);
+                    await ticketCommand.handleCloseTicket(interaction);
+                } else if (ticketMenuCommand && ticketMenuCommand.handleCloseTicket) {
+                    console.log(`Appel de handleCloseTicket pour ticketmenu.js`);
+                    await ticketMenuCommand.handleCloseTicket(interaction);
+                } else {
+                    console.warn(`Aucune méthode handleCloseTicket trouvée pour close_ticket`);
+                    await interaction.reply({ content: 'Commande de fermeture non configurée.', flags: InteractionResponseFlags.Ephemeral });
+                }
+                return;
+            }
+
+            // Gestion des autres boutons (rôles, règlement, etc.)
             for (const [name, command] of client.commands) {
                 if (!command.handleButtonInteraction) continue;
 
-                // Liste des boutons supportés par chaque commande
                 if (
                     (name === 'reglement' && interaction.customId === 'accept_reglement') ||
-                    (name === 'ticket' && (
-                        interaction.customId === 'create_ticket' ||
-                        interaction.customId === 'ticket_type_6'
-                    )) ||
                     (name === 'role-genre' && interaction.customId.startsWith('genre_')) ||
                     (name === 'role-pronom' && interaction.customId.startsWith('pronom_')) ||
                     (name === 'role-age' && interaction.customId.startsWith('age_')) ||
@@ -304,63 +333,29 @@ client.on('interactionCreate', async interaction => {
                     (name === 'role-evenement' && interaction.customId.startsWith('event_')) ||
                     (name === 'role-membre' && interaction.customId.startsWith('membre_'))
                 ) {
-                    try {
-                        await command.handleButtonInteraction(interaction);
-                        return;
-                    } catch (error) {
-                        console.error(`Erreur dans la gestion du bouton ${interaction.customId} pour ${name} :`, error.message, error.stack);
-                        if (!interaction.replied && !interaction.deferred) {
-                            await interaction.reply({ content: 'Erreur lors du traitement du bouton !', flags: InteractionResponseFlags.Ephemeral });
-                        }
-                    }
+                    console.log(`Appel de handleButtonInteraction pour ${name}`);
+                    await command.handleButtonInteraction(interaction);
+                    return;
                 }
             }
 
-            // Gestion explicite du bouton close_ticket pour ticket.js et ticketmenu.js
-            if (interaction.customId === 'close_ticket') {
-                const ticketCommand = client.commands.get('ticket');
-                const ticketMenuCommand = client.commands.get('ticket-menu');
-
-                try {
-                    if (ticketCommand && ticketCommand.handleCloseTicket) {
-                        console.log(`Tentative de handleCloseTicket pour ticket.js par ${interaction.user.tag}`);
-                        await ticketCommand.handleCloseTicket(interaction);
-                    } else if (ticketMenuCommand && ticketMenuCommand.handleCloseTicket) {
-                        console.log(`Tentative de handleCloseTicket pour ticketmenu.js par ${interaction.user.tag}`);
-                        await ticketMenuCommand.handleCloseTicket(interaction);
-                    } else {
-                        console.warn(`Aucune méthode handleCloseTicket trouvée pour close_ticket`);
-                        await interaction.reply({ content: 'Commande de fermeture non configurée.', flags: InteractionResponseFlags.Ephemeral });
-                    }
-                } catch (error) {
-                    console.error(`Erreur dans la gestion du bouton close_ticket :`, error.message, error.stack);
-                    if (!interaction.replied && !interaction.deferred) {
-                        await interaction.reply({ content: 'Erreur lors de la fermeture du ticket !', flags: InteractionResponseFlags.Ephemeral });
-                    }
-                }
-            }
+            // Bouton non reconnu
+            console.warn(`Bouton non géré : ${interaction.customId}`);
+            await interaction.reply({ content: 'Bouton non reconnu.', flags: InteractionResponseFlags.Ephemeral });
         }
 
         if (interaction.isStringSelectMenu()) {
-            // Gérer les menus déroulants
+            // Log du menu déroulant
             console.log(`Menu déroulant cliqué : ${interaction.customId} par ${interaction.user.tag}`);
 
-            // Gestion explicite pour ticketmenu.js
-            if (interaction.customId === 'select_ticket') {
-                const ticketMenuCommand = client.commands.get('ticket-menu');
-                if (ticketMenuCommand && ticketMenuCommand.handleMenuInteraction) {
-                    try {
-                        console.log(`Appel de handleMenuInteraction pour ticketmenu.js`);
-                        await ticketMenuCommand.handleMenuInteraction(interaction);
-                    } catch (error) {
-                        console.error(`Erreur dans handleMenuInteraction pour select_ticket :`, error.message, error.stack);
-                        if (!interaction.replied && !interaction.deferred) {
-                            await interaction.reply({ content: 'Erreur lors du traitement du menu !', flags: InteractionResponseFlags.Ephemeral });
-                        }
-                    }
-                } else {
-                    console.warn(`Aucune méthode handleMenuInteraction trouvée pour ticket-menu`);
-                }
+            // Gestion du menu ticket-menu
+            const ticketMenuCommand = client.commands.get('ticket-menu');
+            if (interaction.customId === 'select_ticket' && ticketMenuCommand && ticketMenuCommand.handleMenuInteraction) {
+                console.log(`Appel de handleMenuInteraction pour ticketmenu.js`);
+                await ticketMenuCommand.handleMenuInteraction(interaction);
+            } else {
+                console.warn(`Menu non géré : ${interaction.customId}`);
+                await interaction.reply({ content: 'Menu non reconnu.', flags: InteractionResponseFlags.Ephemeral });
             }
         }
     } catch (error) {
@@ -368,7 +363,7 @@ client.on('interactionCreate', async interaction => {
         if (!interaction.replied && !interaction.deferred) {
             await interaction.reply({ content: 'Erreur lors du traitement de l’interaction !', flags: InteractionResponseFlags.Ephemeral });
         } else if (interaction.deferred) {
-            await interaction.editReply({ content: 'Erreur lors du traitement de l’interaction !' });
+            await interaction.editReply({ content: 'Erreur lors du traitement de l’interaction !', flags: InteractionResponseFlags.Ephemeral });
         }
     }
 });
