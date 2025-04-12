@@ -1,6 +1,6 @@
 // ticket.js
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, PermissionFlagsBits, EmbedBuilder, InteractionResponseFlags } = require('discord.js');
 const path = require('path');
 
 module.exports = {
@@ -17,14 +17,15 @@ module.exports = {
             console.warn(`[Permissions] Accès refusé pour ${interaction.member.user.tag} (pas admin ni modo)`);
             return interaction.reply({
                 content: 'Vous n\'avez pas la permission d\'utiliser cette commande.',
-                ephemeral: true
+                flags: InteractionResponseFlags.Ephemeral
             });
         }
 
         console.log(`Début de /ticket par ${interaction.member.user.tag}`);
 
         try {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral });
+            console.log('deferReply envoyé dans execute');
 
             const buttonNewTicket = new ButtonBuilder()
                 .setCustomId('ticket_type_6')
@@ -44,15 +45,19 @@ module.exports = {
 
             await interaction.editReply({
                 content: 'Le message pour ouvrir un ticket a été envoyé.',
-                ephemeral: true
+                flags: InteractionResponseFlags.Ephemeral
             });
             console.log(`Message de ticket envoyé dans ${interaction.channel.id}`);
         } catch (error) {
             console.error('Erreur dans /ticket :', error.message, error.stack);
-            await interaction.editReply({
-                content: 'Une erreur est survenue lors de l\'exécution de la commande.',
-                ephemeral: true
-            });
+            try {
+                await interaction.editReply({
+                    content: `Une erreur est survenue lors de l’exécution de la commande : ${error.message}`,
+                    flags: InteractionResponseFlags.Ephemeral
+                });
+            } catch (replyError) {
+                console.error('Erreur lors de editReply dans execute :', replyError.message, replyError.stack);
+            }
         }
     },
 
@@ -60,10 +65,11 @@ module.exports = {
         if (interaction.customId === 'ticket_type_6') {
             console.log(`Bouton ticket_type_6 cliqué par ${interaction.member.user.tag}`);
             try {
-                await interaction.deferReply({ ephemeral: true });
+                await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral });
+                console.log('deferReply envoyé dans handleButtonInteraction');
 
                 const ticketUtils = require('../utils/ticketUtils');
-                console.log('ticketUtils chargé dans handleButtonInteraction :', ticketUtils);
+                console.log('ticketUtils chargé dans handleButtonInteraction :', Object.keys(ticketUtils));
 
                 const member = interaction.member;
                 const guild = interaction.guild;
@@ -103,15 +109,19 @@ module.exports = {
 
                 await interaction.editReply({
                     content: 'Votre ticket a été créé avec succès.',
-                    ephemeral: true
+                    flags: InteractionResponseFlags.Ephemeral
                 });
                 console.log(`Ticket créé pour ${member.user.tag}`);
             } catch (error) {
                 console.error('Erreur lors de la création du ticket :', error.message, error.stack);
-                await interaction.editReply({
-                    content: `Erreur lors de la création du ticket : ${error.message}`,
-                    ephemeral: true
-                });
+                try {
+                    await interaction.editReply({
+                        content: `Erreur lors de la création du ticket : ${error.message}`,
+                        flags: InteractionResponseFlags.Ephemeral
+                    });
+                } catch (replyError) {
+                    console.error('Erreur lors de editReply dans handleButtonInteraction :', replyError.message, replyError.stack);
+                }
             }
         }
     },
@@ -120,10 +130,11 @@ module.exports = {
         if (interaction.customId === 'close_ticket') {
             console.log(`Bouton close_ticket cliqué par ${interaction.member.user.tag}`);
             try {
-                await interaction.deferReply({ ephemeral: true });
+                await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral });
+                console.log('deferReply envoyé dans handleCloseTicket');
 
                 const ticketUtils = require('../utils/ticketUtils');
-                console.log('ticketUtils chargé dans handleCloseTicket :', ticketUtils);
+                console.log('ticketUtils chargé dans handleCloseTicket :', Object.keys(ticketUtils));
 
                 const member = interaction.member;
                 const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
@@ -134,32 +145,35 @@ module.exports = {
                     console.warn(`[Permissions] ${member.user.tag} a essayé de fermer un ticket sans permission`);
                     await interaction.editReply({
                         content: 'Vous n\'avez pas la permission de fermer ce ticket.',
-                        ephemeral: true
+                        flags: InteractionResponseFlags.Ephemeral
                     });
                     return;
                 }
 
                 const channel = interaction.channel;
-                console.log('Début fermeture ticket');
+                console.log(`Début fermeture ticket ${channel.name}`);
                 const result = await ticketUtils.closeTicketChannel(channel, `Ticket fermé par ${member.user.tag}`);
+                console.log(`Résultat closeTicketChannel :`, result);
+
                 if (!result.success) {
-                    throw new Error(result.error);
+                    throw new Error(result.error || 'Échec de la fermeture du ticket');
                 }
-                console.log(`Ticket ${channel.name} fermé par ${member.user.tag}`);
 
                 await interaction.editReply({
                     content: 'Ticket fermé avec succès.',
-                    ephemeral: true
+                    flags: InteractionResponseFlags.Ephemeral
                 });
-                console.log('editReply envoyé dans handleCloseTicket');
-
+                console.log(`Ticket ${channel.name} fermé par ${member.user.tag}`);
             } catch (error) {
-                console.error('Erreur lors de la fermeture du ticket :', error.message, error.stack);
-                await interaction.editReply({
-                    content: `Erreur lors de la fermeture du ticket : ${error.message}`,
-                    ephemeral: true
-                });
-                console.log('editReply erreur envoyé dans handleCloseTicket');
+                console.error('Erreur dans handleCloseTicket :', error.message, error.stack);
+                try {
+                    await interaction.editReply({
+                        content: `Erreur lors de la fermeture du ticket : ${error.message}`,
+                        flags: InteractionResponseFlags.Ephemeral
+                    });
+                } catch (replyError) {
+                    console.error('Erreur lors de editReply dans handleCloseTicket :', replyError.message, replyError.stack);
+                }
             }
         }
     },

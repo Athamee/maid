@@ -127,13 +127,19 @@ async function createTicketChannel(client, guild, member, ticketType, customMess
 }
 
 async function fetchAllMessages(channel) {
+    // Récupérer tous les messages du canal par lots de 100
     let allMessages = [];
     let lastId = null;
     while (true) {
-        const messages = await channel.messages.fetch({ limit: 100, before: lastId });
-        allMessages = allMessages.concat(Array.from(messages.values()));
-        if (messages.size < 100) break;
-        lastId = messages.last().id;
+        try {
+            const messages = await channel.messages.fetch({ limit: 100, before: lastId });
+            allMessages = allMessages.concat(Array.from(messages.values()));
+            if (messages.size < 100) break;
+            lastId = messages.last().id;
+        } catch (error) {
+            console.error('Erreur lors de la récupération des messages :', error.message);
+            break;
+        }
     }
     return allMessages;
 }
@@ -257,7 +263,7 @@ async function closeTicketChannel(channel, reason) {
                 if (!logChannel || logChannel.type !== ChannelType.GuildText) {
                     console.error(`Salon textuel ${logChannelId} introuvable ou non valide dans le serveur ${logGuildId}.`);
                 } else {
-                    console.log('Envoi transcription au canal de logs');
+                    console.log(`Envoi transcription au canal ${logChannel.name}`);
                     await logChannel.send({
                         content: `**Transcription du ticket ${channel.name}**\nOuvert par : ${ticketOwner}\nRaison de fermeture : "${reason}"`,
                         files: [filePath]
@@ -278,8 +284,13 @@ async function closeTicketChannel(channel, reason) {
 
         // Suppression du canal
         console.log('Suppression du canal');
-        await channel.delete(`Ticket fermé : ${reason}`);
-        console.log(`Ticket fermé avec succès : ${channel.name}`);
+        try {
+            await channel.delete(`Ticket fermé : ${reason}`);
+            console.log(`Ticket fermé avec succès : ${channel.name}`);
+        } catch (deleteError) {
+            console.error('Erreur lors de la suppression du canal :', deleteError.message);
+            throw new Error(`Échec suppression canal : ${deleteError.message}`);
+        }
 
         return { success: true };
 

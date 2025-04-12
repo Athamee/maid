@@ -5,7 +5,8 @@ const {
     ActionRowBuilder, 
     StringSelectMenuBuilder, 
     AttachmentBuilder, 
-    EmbedBuilder 
+    EmbedBuilder,
+    InteractionResponseFlags
 } = require('discord.js');
 const path = require('path');
 const fs = require('fs').promises;
@@ -19,9 +20,11 @@ module.exports = {
 
     async execute(interaction) {
         try {
+            // Log début commande
             console.log(`Début de /ticket-menu par ${interaction.member.user.tag}`);
 
-            await interaction.deferReply({ ephemeral: true });
+            // Différer la réponse
+            await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral });
             console.log('deferReply envoyé');
 
             // Vérifier l’existence de l’image
@@ -34,6 +37,7 @@ module.exports = {
                 throw new Error(`Image ticket_membre.png introuvable`);
             }
 
+            // Création du menu déroulant
             const selectMenu = new StringSelectMenuBuilder()
                 .setCustomId('select_ticket')
                 .setPlaceholder('Sélectionne le type de ticket')
@@ -50,6 +54,7 @@ module.exports = {
 
             console.log('Menu déroulant créé');
 
+            // Ajout de l’image
             const attachment = new AttachmentBuilder(imagePath).setName('ticket_image.png');
             console.log('AttachmentBuilder créé');
 
@@ -63,15 +68,17 @@ module.exports = {
             }
             console.log('Permissions vérifiées pour envoi menu');
 
+            // Envoi du menu
             await interaction.channel.send({
                 components: [row],
                 files: [attachment],
             });
             console.log(`Menu envoyé dans ${interaction.channel.id}`);
 
+            // Confirmation
             await interaction.editReply({
                 content: 'Le menu pour ouvrir un ticket a été envoyé avec succès.',
-                ephemeral: true
+                flags: InteractionResponseFlags.Ephemeral
             });
             console.log('editReply envoyé');
 
@@ -80,7 +87,7 @@ module.exports = {
             try {
                 await interaction.editReply({
                     content: `Erreur lors de l’envoi du menu : ${error.message}`,
-                    ephemeral: true
+                    flags: InteractionResponseFlags.Ephemeral
                 });
                 console.log('editReply erreur envoyé');
             } catch (replyError) {
@@ -90,18 +97,27 @@ module.exports = {
     },
 
     async handleMenuInteraction(interaction) {
-        if (interaction.customId !== 'select_ticket') return;
+        // Log toutes interactions reçues
+        console.log(`Interaction menu reçue : customId=${interaction.customId}, user=${interaction.member.user.tag}`);
+        
+        // Vérifier customId
+        if (interaction.customId !== 'select_ticket') {
+            console.log(`customId ${interaction.customId} ignoré`);
+            return;
+        }
 
         const member = interaction.member;
         const guild = interaction.guild;
         const selectedType = interaction.values[0];
 
-        console.log(`Interaction reçue pour ${member.user.tag} avec type ${selectedType}`);
+        console.log(`Interaction select_ticket pour ${member.user.tag} avec type ${selectedType}`);
 
         try {
-            await interaction.deferReply({ ephemeral: true });
+            // Différer la réponse
+            await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral });
             console.log('deferReply envoyé dans handleMenuInteraction');
 
+            // Messages personnalisés pour chaque type de ticket
             const customMessages = {
                 'Certification': `## Bienvenue pour ta certification.\nUn membre du Staff va venir dès que possible pour la réaliser.\n\n*La certification te permettra d'avoir un accès plus large au serveur, mais aussi d'accéder aux contenus NSFW du serveur.*\n\n### Pour te faire certifier, tu as deux possibilités :\n\n> * Nous avons besoin d'une photo d'un document sur lequel on peut voir ta photo et ta date de naissance, et un selfie. Cela nous permettra de faire la vérification.\n\n> * Tu peux aussi faire la vérification via un voc (avec cam).\n\n> *Aucune information ne sera conservée.*`,
                 'MP': `## Bienvenue pour ta demande d'accès à la correspondance privée.\n\n> * **Nous te rappelons que toutes les demandes doivent passer par le canal Demande de correspondance**\n> *Tout MP sauvage entraînera des sanctions.*\n\n### Nous comptons sur toi pour respecter le consentement des membres. :smiling_imp: `,
@@ -115,12 +131,14 @@ module.exports = {
 
             const customMessage = customMessages[selectedType] || 'Un message par défaut si le type n’existe pas';
 
+            // Création de l’embed
             console.log('Création embed pour ticket');
             const embed = new EmbedBuilder()
                 .setTitle(`${selectedType.charAt(0).toUpperCase() + selectedType.slice(1)}`)
                 .setDescription(customMessage)
                 .setColor('#FFAA00');
 
+            // Contenu avec ping
             let content = `<@${member.id}>`;
             if (selectedType === 'Partenariat') {
                 content += ', <@&1340401306971672626>';
@@ -128,13 +146,15 @@ module.exports = {
                 content += ', <@&1094318706487734483>';
             }
 
+            // Création du ticket
             console.log(`Début création ticket pour ${selectedType}`);
             await createTicketChannel(interaction.client, guild, member, selectedType, { content, embeds: [embed] });
             console.log(`Ticket créé pour ${member.user.tag} (Type: ${selectedType})`);
 
+            // Confirmation
             await interaction.editReply({
                 content: 'Votre ticket a été créé avec succès.',
-                ephemeral: true
+                flags: InteractionResponseFlags.Ephemeral
             });
             console.log('editReply envoyé dans handleMenuInteraction');
 
@@ -143,7 +163,7 @@ module.exports = {
             try {
                 await interaction.editReply({
                     content: `Erreur lors de la création du ticket : ${error.message}`,
-                    ephemeral: true
+                    flags: InteractionResponseFlags.Ephemeral
                 });
                 console.log('editReply erreur envoyé dans handleMenuInteraction');
             } catch (replyError) {
@@ -153,13 +173,22 @@ module.exports = {
     },
 
     async handleCloseTicket(interaction) {
-        if (interaction.customId !== 'close_ticket') return;
+        // Log toutes interactions reçues
+        console.log(`Interaction close_ticket reçue : customId=${interaction.customId}, user=${interaction.member.user.tag}`);
+        
+        // Vérifier customId
+        if (interaction.customId !== 'close_ticket') {
+            console.log(`customId ${interaction.customId} ignoré`);
+            return;
+        }
 
         console.log(`Bouton close_ticket cliqué par ${interaction.member.user.tag}`);
         try {
-            await interaction.deferReply({ ephemeral: true });
+            // Différer la réponse
+            await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral });
             console.log('deferReply envoyé dans handleCloseTicket');
 
+            // Vérifier permissions utilisateur
             const member = interaction.member;
             const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
             const modoRoleIds = process.env.MODO ? process.env.MODO.split(',').map(id => id.trim()) : [];
@@ -169,32 +198,36 @@ module.exports = {
                 console.warn(`[Permissions] ${member.user.tag} a essayé de fermer un ticket sans permission`);
                 await interaction.editReply({
                     content: 'Vous n\'avez pas la permission de fermer ce ticket.',
-                    ephemeral: true
+                    flags: InteractionResponseFlags.Ephemeral
                 });
                 return;
             }
 
+            // Fermer le ticket
             const channel = interaction.channel;
             const { closeTicketChannel } = require('../utils/ticketUtils');
-            console.log('Début fermeture ticket');
+            console.log(`Début fermeture ticket ${channel.name}`);
             const result = await closeTicketChannel(channel, `Ticket fermé par ${member.user.tag}`);
-            if (!result.success) {
-                throw new Error(result.error);
-            }
-            console.log(`Ticket ${channel.name} fermé par ${member.user.tag}`);
+            console.log(`Résultat closeTicketChannel :`, result);
 
+            // Vérifier résultat
+            if (!result.success) {
+                throw new Error(result.error || 'Échec de la fermeture du ticket');
+            }
+
+            // Confirmer fermeture
             await interaction.editReply({
                 content: 'Ticket fermé avec succès.',
-                ephemeral: true
+                flags: InteractionResponseFlags.Ephemeral
             });
-            console.log('editReply envoyé dans handleCloseTicket');
+            console.log(`Ticket ${channel.name} fermé par ${member.user.tag}`);
 
         } catch (error) {
-            console.error('Erreur lors de la fermeture du ticket :', error.message, error.stack);
+            console.error('Erreur dans handleCloseTicket :', error.message, error.stack);
             try {
                 await interaction.editReply({
                     content: `Erreur lors de la fermeture du ticket : ${error.message}`,
-                    ephemeral: true
+                    flags: InteractionResponseFlags.Ephemeral
                 });
                 console.log('editReply erreur envoyé dans handleCloseTicket');
             } catch (replyError) {
