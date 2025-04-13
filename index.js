@@ -1,3 +1,4 @@
+// index.js
 // Importer les modules nécessaires
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { REST } = require('@discordjs/rest');
@@ -15,7 +16,8 @@ const client = new Client({
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildVoiceStates
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildMessageReactions // Ajouté pour messageReactionAdd
     ]
 });
 
@@ -117,7 +119,7 @@ async function initDatabase() {
             ADD COLUMN IF NOT EXISTS spam_settings TEXT DEFAULT '{}',
             ADD COLUMN IF NOT EXISTS excluded_roles TEXT DEFAULT '[]',
             ADD COLUMN IF NOT EXISTS no_camera_channels TEXT DEFAULT '[]',
-            ADD COLUMN IF NOT EXISTS default_level_message TEXT DEFAULT 'Félicitations {user}, tu es désormais niveau {level} ! Continue d''explorer tes désirs intimes sur le Donjon. 😈';
+            ADD COLUMN IF NOT EXISTS default_level_message TEXT DEFAULT 'Félicitations {user}, tu es désormais niveau {level} ! Continue d’explorer tes désirs intimes sur le Donjon. 😈';
         `);
 
         // S'assurer que spam_settings n'est pas NULL
@@ -140,21 +142,31 @@ const commandsPath = path.join(__dirname, 'commands');
 
 async function loadCommands() {
     try {
+        console.log('Début chargement des commandes...');
         const commandFiles = await fs.readdir(commandsPath);
+        if (commandFiles.length === 0) {
+            console.warn('Aucun fichier trouvé dans commands/');
+        }
         for (const file of commandFiles) {
             if (file.endsWith('.js')) {
                 const filePath = path.join(commandsPath, file);
-                const command = require(filePath);
-                if ('data' in command && 'execute' in command) {
-                    commands.push(command.data.toJSON());
-                    client.commands.set(command.data.name, command);
-                    console.log(`Commande chargée : ${file}`);
-                } else {
-                    console.warn(`[WARNING] La commande à ${filePath} manque une propriété 'data' ou 'execute'.`);
+                console.log(`Tentative chargement : ${file}`);
+                try {
+                    const command = require(filePath);
+                    if ('data' in command && 'execute' in command) {
+                        commands.push(command.data.toJSON());
+                        client.commands.set(command.data.name, command);
+                        console.log(`Commande chargée : ${file} (nom: ${command.data.name})`);
+                    } else {
+                        console.warn(`[WARNING] La commande à ${filePath} manque une propriété 'data' ou 'execute'.`);
+                    }
+                } catch (error) {
+                    console.error(`Erreur chargement ${file} :`, error.message);
                 }
             }
         }
         console.log(`Total commandes chargées : ${client.commands.size}`);
+        console.log('Commandes enregistrées :', Array.from(client.commands.keys()));
     } catch (error) {
         console.error('Erreur lors du chargement des commandes :', error.stack);
     }
@@ -180,19 +192,33 @@ const eventsPath = path.join(__dirname, 'events');
 
 async function loadEvents() {
     try {
+        console.log('Début chargement des événements...');
         const eventFiles = await fs.readdir(eventsPath);
+        if (eventFiles.length === 0) {
+            console.warn('Aucun fichier trouvé dans events/');
+        }
         for (const file of eventFiles) {
             if (file.endsWith('.js')) {
                 const filePath = path.join(eventsPath, file);
-                const event = require(filePath);
-                if (event.once) {
-                    client.once(event.name, (...args) => event.execute(...args));
-                } else {
-                    client.on(event.name, (...args) => event.execute(...args));
+                console.log(`Tentative chargement : ${file}`);
+                try {
+                    const event = require(filePath);
+                    if (event.name && event.execute) {
+                        if (event.once) {
+                            client.once(event.name, (...args) => event.execute(...args));
+                        } else {
+                            client.on(event.name, (...args) => event.execute(...args));
+                        }
+                        console.log(`Événement chargé : ${file} (nom: ${event.name})`);
+                    } else {
+                        console.warn(`[WARNING] L’événement à ${filePath} manque une propriété 'name' ou 'execute'.`);
+                    }
+                } catch (error) {
+                    console.error(`Erreur chargement ${file} :`, error.message);
                 }
-                console.log(`Événement chargé : ${file}`);
             }
         }
+        console.log('Événements enregistrés :', client.eventNames());
     } catch (error) {
         console.error('Erreur lors du chargement des événements :', error.stack);
     }
@@ -203,7 +229,7 @@ async function loadEvents() {
     try {
         await initDatabase();
         await loadCommands();
-        console.log('client.commands prêt pour les interactions'); // Ajout pour confirmer
+        console.log('client.commands prêt pour les interactions');
         await deployCommands();
         await loadEvents();
         await client.login(process.env.TOKEN);

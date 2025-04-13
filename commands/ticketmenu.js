@@ -11,6 +11,8 @@ const path = require('path');
 const fs = require('fs').promises;
 const { createTicketChannel } = require('../utils/ticketUtils');
 
+console.log('Chargement de ticketmenu.js');
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('ticket-menu')

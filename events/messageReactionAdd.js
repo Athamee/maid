@@ -5,15 +5,19 @@ const pool = require('../db');
 module.exports = {
     name: 'messageReactionAdd',
     async execute(reaction, user) {
-        if (user.bot || !reaction.message.guild) return;
+        if (user.bot || !reaction.message.guild) {
+            console.log(`[MessageReactionAdd] Ignoré : bot=${user.bot}, guild=${!!reaction.message.guild}, user=${user.tag}`);
+            return;
+        }
 
-        console.log(`Réaction ajoutée par ${user.tag} sur un message`);
+        console.log(`[MessageReactionAdd] Réaction ajoutée par ${user.tag} sur un message dans #${reaction.message.channel.name}`);
 
         try {
             const guildId = reaction.message.guild.id;
             const userId = user.id;
 
             // Récupérer les paramètres XP
+            console.log(`[MessageReactionAdd] Récupération xp_settings pour guild ${guildId}`);
             const xpSettingsResult = await pool.query(
                 'SELECT reaction_xp, excluded_roles FROM xp_settings WHERE guild_id = $1',
                 [guildId]
@@ -26,14 +30,18 @@ module.exports = {
             const reactionXp = xpSettings.reaction_xp || 2;
             const excludedRoles = JSON.parse(xpSettings.excluded_roles || '[]');
 
+            console.log(`[MessageReactionAdd] Paramètres : reaction_xp=${reactionXp}, excluded_roles=${excludedRoles}`);
+
             // Vérifier les rôles exclus
             const member = await reaction.message.guild.members.fetch(userId);
-            if (excludedRoles.some(roleId => member.roles.cache.has(roleId))) {
-                console.log(`Utilisateur ${user.tag} exclu de l’XP (rôles : ${excludedRoles})`);
+            if (excludedRoles.length > 0 && excludedRoles.some(roleId => member.roles.cache.has(roleId))) {
+                console.log(`[MessageReactionAdd] Utilisateur ${user.tag} exclu de l’XP (rôles : ${excludedRoles.join(', ')})`);
                 return;
             }
+            console.log(`[MessageReactionAdd] Aucun rôle exclu pour ${user.tag}`);
 
             // Mettre à jour l’XP
+            console.log(`[MessageReactionAdd] Insertion XP pour ${user.tag} : ${reactionXp}`);
             const userXpResult = await pool.query(
                 'INSERT INTO xp (guild_id, user_id, xp, level, last_message) VALUES ($1, $2, $3, 1, NOW()) ' +
                 'ON CONFLICT (guild_id, user_id) DO UPDATE SET xp = xp.xp + $3 RETURNING xp, level',
@@ -41,13 +49,14 @@ module.exports = {
             );
             let { xp, level } = userXpResult.rows[0];
 
-            console.log(`XP ajouté à ${user.tag} pour réaction : +${reactionXp}, total : ${xp}`);
+            console.log(`[MessageReactionAdd] XP ajouté à ${user.tag} : +${reactionXp}, total=${xp}, level=${level}`);
 
             // Calculer le nouveau niveau
             const getRequiredXp = (lvl) => 1000 + Math.pow(lvl - 1, 2) * 400;
             const xpForNextLevel = getRequiredXp(level + 1);
             if (xp >= xpForNextLevel) {
                 const newLevel = level + 1;
+                console.log(`[MessageReactionAdd] Nouveau niveau ${newLevel} pour ${user.tag}`);
                 await pool.query(
                     'UPDATE xp SET level = $3 WHERE guild_id = $1 AND user_id = $2',
                     [guildId, userId, newLevel]
@@ -83,7 +92,9 @@ module.exports = {
 
                 if (channel && channel.isTextBased()) {
                     await channel.send({ content: messageContent });
-                    console.log(`Niveau ${newLevel} annoncé pour ${user.tag} dans #${channel.name}`);
+                    console.log(`[MessageReactionAdd] Niveau ${newLevel} annoncé pour ${user.tag} dans #${channel.name}`);
+                } else {
+                    console.log(`[MessageReactionAdd] Impossible d’annoncer niveau ${newLevel} : channel=${channelId}`);
                 }
             }
         } catch (error) {

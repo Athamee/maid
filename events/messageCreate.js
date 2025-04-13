@@ -7,9 +7,12 @@ module.exports = {
     name: 'messageCreate',
     async execute(message) {
         // Ignorer les messages des bots ou hors guildes
-        if (message.author.bot || !message.guild) return;
+        if (message.author.bot || !message.guild) {
+            console.log(`[MessageCreate] Ignoré : bot=${message.author.bot}, guild=${!!message.guild}, user=${message.author.tag}`);
+            return;
+        }
 
-        console.log(`Message reçu de ${message.author.tag} dans #${message.channel.name}`);
+        console.log(`[MessageCreate] Message reçu de ${message.author.tag} dans #${message.channel.name}, content="${message.content}", attachments=${message.attachments.size}`);
 
         const guildId = message.guild.id;
         const userId = message.author.id;
@@ -18,6 +21,7 @@ module.exports = {
 
         try {
             // Récupérer les paramètres anti-spam et XP
+            console.log(`[MessageCreate] Récupération xp_settings pour guild ${guildId}`);
             const settingsResult = await pool.query(
                 'SELECT spam_settings, message_xp, image_xp, excluded_roles FROM xp_settings WHERE guild_id = $1',
                 [guildId]
@@ -41,15 +45,19 @@ module.exports = {
             const imageXp = settings.image_xp || 15;
             const excludedRoles = JSON.parse(settings.excluded_roles || '[]');
 
+            console.log(`[MessageCreate] Paramètres : message_xp=${messageXp}, image_xp=${imageXp}, excluded_roles=${excludedRoles}, spam_settings=`, spamSettings);
+
             // Vérifier les rôles exclus
             const member = await message.guild.members.fetch(userId);
-            if (excludedRoles.some(roleId => member.roles.cache.has(roleId))) {
-                console.log(`Utilisateur ${message.author.tag} exclu de l’XP (rôles : ${excludedRoles})`);
+            if (excludedRoles.length > 0 && excludedRoles.some(roleId => member.roles.cache.has(roleId))) {
+                console.log(`[MessageCreate] Utilisateur ${message.author.tag} exclu de l’XP (rôles : ${excludedRoles.join(', ')})`);
                 return;
             }
+            console.log(`[MessageCreate] Aucun rôle exclu pour ${message.author.tag}`);
 
             // Anti-spam
             if (spamSettings.message_limit && spamSettings.message_limit > 0) {
+                console.log(`[MessageCreate] Vérification anti-spam pour ${message.author.tag}`);
                 // Initialiser le cache
                 if (!message.client.spamCache) message.client.spamCache = new Map();
                 const userCache = message.client.spamCache.get(userId) || {
@@ -61,6 +69,7 @@ module.exports = {
                 // Vérifier le nombre de mentions
                 const mentionCount = message.mentions.users.size + message.mentions.roles.size;
                 if (mentionCount > spamSettings.mention_limit) {
+                    console.log(`[MessageCreate] Trop de mentions (${mentionCount} > ${spamSettings.mention_limit})`);
                     await applyAction(message, spamSettings.action, 'Trop de mentions', logChannelId, piloriChannelId);
                     return;
                 }
@@ -69,6 +78,7 @@ module.exports = {
                 if (message.content === userCache.lastContent && message.content.trim() !== '') {
                     userCache.repeatCount += 1;
                     if (userCache.repeatCount >= spamSettings.repeat_limit) {
+                        console.log(`[MessageCreate] Messages répétés (${userCache.repeatCount} >= ${spamSettings.repeat_limit})`);
                         await applyAction(message, spamSettings.action, 'Messages répétés', logChannelId, piloriChannelId);
                         return;
                     }
@@ -84,24 +94,28 @@ module.exports = {
 
                 // Vérifier si trop de messages
                 if (userCache.messages.length > spamSettings.message_limit) {
+                    console.log(`[MessageCreate] Trop de messages (${userCache.messages.length} > ${spamSettings.message_limit})`);
                     await applyAction(message, spamSettings.action, 'Trop de messages', logChannelId, piloriChannelId);
                     return;
                 }
 
                 // Mettre à jour le cache
                 message.client.spamCache.set(userId, userCache);
+                console.log(`[MessageCreate] Anti-spam OK, cache mis à jour pour ${message.author.tag}`);
             } else {
-                console.log(`[AntiSpam] Filtre désactivé pour guild ${guildId} (message_limit non défini ou 0).`);
+                console.log(`[MessageCreate] Filtre anti-spam désactivé pour guild ${guildId}`);
             }
 
             // Attribuer l’XP
             let xpToAdd = messageXp;
             if (message.attachments.size > 0) {
                 xpToAdd += imageXp;
-                console.log(`Image détectée, ajout de ${imageXp} XP pour ${message.author.tag}`);
+                console.log(`[MessageCreate] Image détectée, ajout de ${imageXp} XP pour ${message.author.tag}`);
             }
+            console.log(`[MessageCreate] Calcul XP : ${xpToAdd} (message=${messageXp}, image=${message.attachments.size > 0 ? imageXp : 0})`);
 
             // Mettre à jour l’XP et last_message
+            console.log(`[MessageCreate] Insertion XP pour ${message.author.tag} : ${xpToAdd}`);
             const userXpResult = await pool.query(
                 'INSERT INTO xp (guild_id, user_id, xp, level, last_message) VALUES ($1, $2, $3, 1, NOW()) ' +
                 'ON CONFLICT (guild_id, user_id) DO UPDATE SET xp = xp.xp + $3, last_message = NOW() RETURNING xp, level',
@@ -109,13 +123,14 @@ module.exports = {
             );
             let { xp, level } = userXpResult.rows[0];
 
-            console.log(`XP ajouté à ${message.author.tag} : +${xpToAdd}, total : ${xp}`);
+            console.log(`[MessageCreate] XP ajouté à ${message.author.tag} : +${xpToAdd}, total=${xp}, level=${level}`);
 
             // Calculer le nouveau niveau
             const getRequiredXp = (lvl) => 1000 + Math.pow(lvl - 1, 2) * 400;
             const xpForNextLevel = getRequiredXp(level + 1);
             if (xp >= xpForNextLevel) {
                 const newLevel = level + 1;
+                console.log(`[MessageCreate] Nouveau niveau ${newLevel} pour ${message.author.tag}`);
                 await pool.query(
                     'UPDATE xp SET level = $3 WHERE guild_id = $1 AND user_id = $2',
                     [guildId, userId, newLevel]
@@ -151,7 +166,9 @@ module.exports = {
 
                 if (channel && channel.isTextBased()) {
                     await channel.send({ content: messageContent });
-                    console.log(`Niveau ${newLevel} annoncé pour ${message.author.tag} dans #${channel.name}`);
+                    console.log(`[MessageCreate] Niveau ${newLevel} annoncé pour ${message.author.tag} dans #${channel.name}`);
+                } else {
+                    console.log(`[MessageCreate] Impossible d’annoncer niveau ${newLevel} : channel=${channelId}`);
                 }
             }
         } catch (error) {
