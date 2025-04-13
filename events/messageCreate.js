@@ -2,6 +2,29 @@
 // Gérer les messages pour l’anti-spam et l’attribution d’XP
 const { Client } = require('discord.js');
 const pool = require('../db');
+const path = require('path');
+
+// Configuration des images pour les montées de niveau
+const levelUpImages = {
+    10: path.join(__dirname, '../img/level10.png'),
+    15: path.join(__dirname, '../img/level15.png'),
+    20: path.join(__dirname, '../img/level20.png')
+};
+const defaultImage = path.join(__dirname, '../img/default.png');
+
+const getLevelUpImage = (level) => {
+    if (!level || level < 1) {
+        console.warn(`Niveau invalide : ${level}, utilisation de l'image par défaut`);
+        return defaultImage;
+    }
+    const image = levelUpImages[level];
+    if (image) {
+        console.log(`Niveau ${level} exact, image sélectionnée : ${image}`);
+        return image;
+    }
+    console.log(`Niveau ${level} sans image spécifique, image par défaut : ${defaultImage}`);
+    return defaultImage;
+};
 
 module.exports = {
     name: 'messageCreate',
@@ -160,7 +183,7 @@ module.exports = {
                     .replace('{user}', `<@${userId}>`)
                     .replace('{level}', newLevel);
 
-                // Envoyer l’annonce
+                // Envoyer l’annonce avec image pour les milestones
                 const channelIdResult = await pool.query(
                     'SELECT level_up_channel FROM xp_settings WHERE guild_id = $1',
                     [guildId]
@@ -169,7 +192,7 @@ module.exports = {
                 const channel = channelId ? message.guild.channels.cache.get(channelId) : message.channel;
 
                 if (channel && channel.isTextBased()) {
-                    await channel.send({ content: messageContent });
+                    await channel.send({ content: messageContent, files: [getLevelUpImage(newLevel)] });
                     console.log(`[MessageCreate] Niveau ${newLevel} annoncé pour ${message.author.tag} dans #${channel.name}`);
                 } else {
                     console.log(`[MessageCreate] Impossible d’annoncer niveau ${newLevel} : channel=${channelId}`);
