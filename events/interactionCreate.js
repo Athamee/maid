@@ -48,8 +48,9 @@ module.exports = {
           return;
         }
         try {
-          // Extraire ticketType à partir de customId
-          let ticketType = interaction.customId; // Par exemple, "ticket_type_6" ou "close_ticket"
+          // Forcer ticketType à être une string basée sur customId
+          const ticketType = String(interaction.customId); // Ex. "ticket_type_6"
+          console.log(`ticketType passé à handleButtonInteraction : ${ticketType}`);
           if (ticketType === 'ticket_type_6' && command.handleButtonInteraction) {
             console.log(`Bouton ticket_type_6 cliqué par ${interaction.user.tag}`);
             await command.handleButtonInteraction(interaction, ticketType);
