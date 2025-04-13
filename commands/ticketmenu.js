@@ -6,7 +6,7 @@ const {
     StringSelectMenuBuilder, 
     AttachmentBuilder, 
     EmbedBuilder,
-    InteractionResponseFlags // Ajout pour gérer ephemeral
+    InteractionResponseFlags
 } = require('discord.js');
 const path = require('path');
 const fs = require('fs').promises;
@@ -107,9 +107,6 @@ module.exports = {
         // Log toutes interactions reçues
         console.log(`Interaction menu reçue : customId=${interaction.customId}, user=${interaction.member?.user?.tag || 'inconnu'}`);
         
-        // Vérifier début fonction
-        console.log('Démarrage handleMenuInteraction');
-
         // Vérifier customId
         if (interaction.customId !== 'select_ticket') {
             console.log(`customId ${interaction.customId} ignoré`);
@@ -151,7 +148,6 @@ module.exports = {
 
         try {
             // Différer la réponse
-            console.log('Avant deferReply dans handleMenuInteraction');
             await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral });
             console.log('deferReply envoyé dans handleMenuInteraction');
 
