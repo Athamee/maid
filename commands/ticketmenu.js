@@ -5,7 +5,8 @@ const {
     ActionRowBuilder, 
     StringSelectMenuBuilder, 
     AttachmentBuilder, 
-    EmbedBuilder
+    EmbedBuilder,
+    InteractionResponseFlags // Ajout pour gérer ephemeral
 } = require('discord.js');
 const path = require('path');
 const fs = require('fs').promises;
@@ -28,8 +29,8 @@ module.exports = {
                 return;
             }
 
-            // Différer la réponse immédiatement
-            await interaction.deferReply({ ephemeral: true });
+            // Différer la réponse immédiatement avec flags
+            await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral });
             console.log('deferReply envoyé');
 
             // Vérifier l’existence de l’image
@@ -83,7 +84,7 @@ module.exports = {
             // Confirmation
             await interaction.editReply({
                 content: 'Le menu pour ouvrir un ticket a été envoyé avec succès.',
-                ephemeral: true
+                flags: InteractionResponseFlags.Ephemeral
             });
             console.log('editReply envoyé');
 
@@ -93,7 +94,7 @@ module.exports = {
                 // Tenter un reply si editReply échoue
                 await interaction.reply({
                     content: `Erreur lors de l’envoi du menu : ${error.message}`,
-                    ephemeral: true
+                    flags: InteractionResponseFlags.Ephemeral
                 });
                 console.log('reply erreur envoyé');
             } catch (replyError) {
@@ -121,18 +122,27 @@ module.exports = {
             return;
         }
 
-        // Vérifier member et guild
-        const member = interaction.member;
-        const guild = interaction.guild;
-        if (!member || !guild) {
-            console.error('Member ou guild manquant dans interaction');
+        // Vérifier interaction de base
+        if (!interaction.isRepliable() || !interaction.member || !interaction.guild) {
+            console.error('Interaction invalide : repliable=', interaction.isRepliable(), 'member=', !!interaction.member, 'guild=', !!interaction.guild);
             return;
         }
+
+        const member = interaction.member;
+        const guild = interaction.guild;
 
         // Vérifier interaction.values
         console.log('Valeurs reçues :', interaction.values);
         if (!interaction.values || interaction.values.length === 0) {
             console.error('Aucune valeur sélectionnée dans le menu');
+            try {
+                await interaction.reply({
+                    content: 'Erreur : aucune option sélectionnée.',
+                    flags: InteractionResponseFlags.Ephemeral
+                });
+            } catch (replyError) {
+                console.error('Erreur lors de reply pour valeurs vides :', replyError.message);
+            }
             return;
         }
         const selectedType = interaction.values[0];
@@ -140,15 +150,9 @@ module.exports = {
         console.log(`Interaction select_ticket pour ${member.user.tag} avec type ${selectedType}`);
 
         try {
-            // Vérifier si l’interaction est valide avant defer
-            console.log('Avant deferReply dans handleMenuInteraction');
-            if (!interaction.isRepliable()) {
-                console.error(`Interaction non répliable pour ${selectedType}`);
-                return;
-            }
-
             // Différer la réponse
-            await interaction.deferReply({ ephemeral: true });
+            console.log('Avant deferReply dans handleMenuInteraction');
+            await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral });
             console.log('deferReply envoyé dans handleMenuInteraction');
 
             // Valider selectedType
@@ -194,17 +198,16 @@ module.exports = {
             // Confirmation
             await interaction.editReply({
                 content: 'Votre ticket a été créé avec succès.',
-                ephemeral: true
+                flags: InteractionResponseFlags.Ephemeral
             });
             console.log('editReply envoyé dans handleMenuInteraction');
 
         } catch (error) {
-            console.error(`Erreur lors de la création du ticket (${selectedType}) :`, error.message, error.stack);
+            console.error(`Erreur lors de la création du ticket (${selectedType || 'inconnu'}) :`, error.message, error.stack);
             try {
-                // Tenter un reply si editReply échoue
                 await interaction.reply({
                     content: `Erreur lors de la création du ticket : ${error.message}`,
-                    ephemeral: true
+                    flags: InteractionResponseFlags.Ephemeral
                 });
                 console.log('reply erreur envoyé dans handleMenuInteraction');
             } catch (replyError) {
@@ -226,7 +229,7 @@ module.exports = {
         console.log(`Bouton close_ticket cliqué par ${interaction.member.user.tag}`);
         try {
             // Différer la réponse
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral });
             console.log('deferReply envoyé dans handleCloseTicket');
 
             // Vérifier permissions utilisateur
@@ -239,7 +242,7 @@ module.exports = {
                 console.warn(`[Permissions] ${member.user.tag} a essayé de fermer un ticket sans permission`);
                 await interaction.editReply({
                     content: 'Vous n\'avez pas la permission de fermer ce ticket.',
-                    ephemeral: true
+                    flags: InteractionResponseFlags.Ephemeral
                 });
                 return;
             }
@@ -259,7 +262,7 @@ module.exports = {
             // Confirmer fermeture
             await interaction.editReply({
                 content: 'Ticket fermé avec succès.',
-                ephemeral: true
+                flags: InteractionResponseFlags.Ephemeral
             });
             console.log(`Ticket ${channel.name} fermé par ${member.user.tag}`);
 
@@ -268,7 +271,7 @@ module.exports = {
             try {
                 await interaction.editReply({
                     content: `Erreur lors de la fermeture du ticket : ${error.message}`,
-                    ephemeral: true
+                    flags: InteractionResponseFlags.Ephemeral
                 });
                 console.log('editReply erreur envoyé dans handleCloseTicket');
             } catch (replyError) {
