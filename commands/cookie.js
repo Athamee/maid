@@ -114,7 +114,7 @@ module.exports = {
             });
             console.log('/cookie served !');
         } catch (error) {
-            console.error('Erreur dans /coffee :', error.response ? error.response.data : error.message);
+            console.error('Erreur dans /cookie :', error.response ? error.response.data : error.message);
             await interaction.reply('Erreur lors de la récupération du GIF !');
         }
     },

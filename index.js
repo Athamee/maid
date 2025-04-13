@@ -113,6 +113,16 @@ async function initDatabase() {
             )
         `);
 
+        // Créer la table pour le suivi du spam
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS spam_tracker (
+                id SERIAL PRIMARY KEY,
+                guild_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
         // Migration pour ajouter les colonnes manquantes à xp_settings
         await pool.query(`
             ALTER TABLE xp_settings
@@ -129,7 +139,7 @@ async function initDatabase() {
             WHERE spam_settings IS NULL;
         `);
 
-        console.log('Tables warns, xp, xp_settings, level_up_messages, voice_role_settings, warn_removed_roles prêtes avec toutes les migrations.');
+        console.log('Tables warns, xp, xp_settings, level_up_messages, voice_role_settings, warn_removed_roles, spam_tracker prêtes avec toutes les migrations.');
     } catch (error) {
         console.error('Erreur lors de l’initialisation de la base de données :', error.stack);
         throw error;
@@ -178,7 +188,7 @@ async function deployCommands() {
     try {
         console.log('Déploiement des commandes...');
         await rest.put(
-            Routes.applicationCommands(process.env.ID_APP),
+            Routes.applicationGuildCommands(process.env.ID_APP, process.env.GUILD_ID),
             { body: commands }
         );
         console.log('Commandes déployées avec succès !');

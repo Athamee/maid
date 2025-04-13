@@ -7,7 +7,7 @@ const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
 const axios = require('axios');
 
 module.exports = {
-    // Définit la commande Slash /hug
+    // Définit la commande Slash /coffee
     data: new SlashCommandBuilder()
         .setName('coffee')
         .setDescription('Sert un café à un.e membre ou à toi-même')
@@ -37,7 +37,7 @@ module.exports = {
         const folderId = process.env.PCLOUD_FOLDER_ID_COFFEE;
 
         // Log pour déboguer
-        console.log('Début de /hug - Email:', email, 'Password:', password ? '[masqué]' : 'undefined', 'Folder ID:', folderId);
+        console.log('Début de /coffee - Email:', email, 'Password:', password ? '[masqué]' : 'undefined', 'Folder ID:', folderId);
 
         if (!folderId) {
             console.log('Erreur : folderId manquant');

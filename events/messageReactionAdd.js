@@ -32,10 +32,14 @@ module.exports = {
 
             console.log(`[MessageReactionAdd] Paramètres : reaction_xp=${reactionXp}, excluded_roles=${excludedRoles}`);
 
-            // Vérifier les rôles exclus
+            // Vérifier les rôles exclus, incluant ARRIVANT_ROLE_ID et REGLEMENT_ACCEPTED_ROLE_ID
             const member = await reaction.message.guild.members.fetch(userId);
-            if (excludedRoles.length > 0 && excludedRoles.some(roleId => member.roles.cache.has(roleId))) {
-                console.log(`[MessageReactionAdd] Utilisateur ${user.tag} exclu de l’XP (rôles : ${excludedRoles.join(', ')})`);
+            if (
+                (excludedRoles.length > 0 && excludedRoles.some(roleId => member.roles.cache.has(roleId))) ||
+                member.roles.cache.has(process.env.ARRIVANT_ROLE_ID) ||
+                member.roles.cache.has(process.env.REGLEMENT_ACCEPTED_ROLE_ID)
+            ) {
+                console.log(`[MessageReactionAdd] Utilisateur ${user.tag} exclu de l’XP (rôles : ${excludedRoles.join(', ')} ou Arrivant/Règlement)`);
                 return;
             }
             console.log(`[MessageReactionAdd] Aucun rôle exclu pour ${user.tag}`);
