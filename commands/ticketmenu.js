@@ -116,6 +116,12 @@ module.exports = {
             await interaction.deferReply({ ephemeral: true });
             console.log('deferReply envoyé dans handleMenuInteraction');
 
+            // Valider selectedType
+            const validTypes = ['Certification', 'MP', 'galerie', 'tortures', 'Problèmes', 'Partenariat', 'Suggestions', 'Recrutement'];
+            if (!validTypes.includes(selectedType)) {
+                throw new Error(`Type de ticket invalide : ${selectedType}`);
+            }
+
             // Messages personnalisés pour chaque type de ticket
             const customMessages = {
                 'Certification': `## Bienvenue pour ta certification.\nUn membre du Staff va venir dès que possible pour la réaliser.\n\n*La certification te permettra d'avoir un accès plus large au serveur, mais aussi d'accéder aux contenus NSFW du serveur.*\n\n### Pour te faire certifier, tu as deux possibilités :\n\n> * Nous avons besoin d'une photo d'un document sur lequel on peut voir ta photo et ta date de naissance, et un selfie. Cela nous permettra de faire la vérification.\n\n> * Tu peux aussi faire la vérification via un voc (avec cam).\n\n> *Aucune information ne sera conservée.*`,
