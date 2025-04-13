@@ -200,6 +200,7 @@ async function deployCommands() {
 const eventsPath = path.join(__dirname, 'events');
 
 async function loadEvents() {
+    console.log('Tentative lancement loadEvents...'); // Log pour confirmer exécution
     try {
         console.log('Début chargement des événements...');
         // Vérifier si le dossier events existe
