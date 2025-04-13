@@ -120,6 +120,13 @@ module.exports = {
 
         const member = interaction.member;
         const guild = interaction.guild;
+
+        // Vérifier interaction.values
+        console.log('Valeurs reçues :', interaction.values);
+        if (!interaction.values || interaction.values.length === 0) {
+            console.error('Aucune valeur sélectionnée dans le menu');
+            return;
+        }
         const selectedType = interaction.values[0];
 
         console.log(`Interaction select_ticket pour ${member.user.tag} avec type ${selectedType}`);
