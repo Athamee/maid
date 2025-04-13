@@ -90,7 +90,7 @@ async function initDatabase() {
         // Créer la table pour les paramètres des rôles vocaux
         await pool.query(`
             CREATE TABLE IF NOT EXISTS voice_role_settings (
-                guild_id TEXT NOT NOT NULL,
+                guild_id TEXT NOT NULL,
                 voice_channel_id TEXT NOT NULL,
                 role_id TEXT NOT NULL,
                 text_channel_id TEXT NOT NULL,
@@ -110,53 +110,11 @@ async function initDatabase() {
 
         // Migration pour ajouter les colonnes manquantes à xp_settings
         await pool.query(`
-            DO $$
-            BEGIN
-                -- Ajouter spam_settings si absent
-                IF NOT EXISTS (
-                    SELECT 1 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'xp_settings' 
-                    AND column_name = 'spam_settings'
-                ) THEN
-                    ALTER TABLE xp_settings 
-                    ADD COLUMN spam_settings TEXT DEFAULT '{}';
-                END IF;
-
-                -- Ajouter excluded_roles si absent
-                IF NOT EXISTS (
-                    SELECT 1 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'xp_settings' 
-                    AND column_name = 'excluded_roles'
-                ) THEN
-                    ALTER TABLE xp_settings 
-                    ADD COLUMN excluded_roles TEXT DEFAULT '[]';
-                END IF;
-
-                -- Ajouter no_camera_channels si absent
-                IF NOT EXISTS (
-                    SELECT 1 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'xp_settings' 
-                    AND column_name = 'no_camera_channels'
-                ) THEN
-                    ALTER TABLE xp_settings 
-                    ADD COLUMN no_camera_channels TEXT DEFAULT '[]';
-                END IF;
-
-                -- Ajouter default_level_message si absent
-                IF NOT EXISTS (
-                    SELECT 1 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'xp_settings' 
-                    AND column_name = 'default_level_message'
-                ) THEN
-                    ALTER TABLE xp_settings 
-                    ADD COLUMN default_level_message TEXT DEFAULT 'Félicitations {user}, tu es désormais niveau {level} ! Continue d''explorer tes désirs intimes sur le Donjon. 😈';
-                END IF;
-            END;
-            $$;
+            ALTER TABLE xp_settings
+            ADD COLUMN IF NOT EXISTS spam_settings TEXT DEFAULT '{}',
+            ADD COLUMN IF NOT EXISTS excluded_roles TEXT DEFAULT '[]',
+            ADD COLUMN IF NOT EXISTS no_camera_channels TEXT DEFAULT '[]',
+            ADD COLUMN IF NOT EXISTS default_level_message TEXT DEFAULT 'Félicitations {user}, tu es désormais niveau {level} ! Continue d''explorer tes désirs intimes sur le Donjon. 😈';
         `);
 
         // S'assurer que spam_settings n'est pas NULL
