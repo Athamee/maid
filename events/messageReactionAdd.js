@@ -1,0 +1,93 @@
+// messageReactionAdd.js
+// Gérer les réactions pour attribuer l’XP
+const pool = require('../db');
+
+module.exports = {
+    name: 'messageReactionAdd',
+    async execute(reaction, user) {
+        if (user.bot || !reaction.message.guild) return;
+
+        console.log(`Réaction ajoutée par ${user.tag} sur un message`);
+
+        try {
+            const guildId = reaction.message.guild.id;
+            const userId = user.id;
+
+            // Récupérer les paramètres XP
+            const xpSettingsResult = await pool.query(
+                'SELECT reaction_xp, excluded_roles FROM xp_settings WHERE guild_id = $1',
+                [guildId]
+            );
+            const xpSettings = xpSettingsResult.rows[0] || {
+                reaction_xp: 2,
+                excluded_roles: '[]'
+            };
+
+            const reactionXp = xpSettings.reaction_xp || 2;
+            const excludedRoles = JSON.parse(xpSettings.excluded_roles || '[]');
+
+            // Vérifier les rôles exclus
+            const member = await reaction.message.guild.members.fetch(userId);
+            if (excludedRoles.some(roleId => member.roles.cache.has(roleId))) {
+                console.log(`Utilisateur ${user.tag} exclu de l’XP (rôles : ${excludedRoles})`);
+                return;
+            }
+
+            // Mettre à jour l’XP
+            const userXpResult = await pool.query(
+                'INSERT INTO xp (guild_id, user_id, xp, level, last_message) VALUES ($1, $2, $3, 1, NOW()) ' +
+                'ON CONFLICT (guild_id, user_id) DO UPDATE SET xp = xp.xp + $3 RETURNING xp, level',
+                [guildId, userId, reactionXp]
+            );
+            let { xp, level } = userXpResult.rows[0];
+
+            console.log(`XP ajouté à ${user.tag} pour réaction : +${reactionXp}, total : ${xp}`);
+
+            // Calculer le nouveau niveau
+            const getRequiredXp = (lvl) => 1000 + Math.pow(lvl - 1, 2) * 400;
+            const xpForNextLevel = getRequiredXp(level + 1);
+            if (xp >= xpForNextLevel) {
+                const newLevel = level + 1;
+                await pool.query(
+                    'UPDATE xp SET level = $3 WHERE guild_id = $1 AND user_id = $2',
+                    [guildId, userId, newLevel]
+                );
+
+                // Récupérer le message de niveau
+                const levelMessageResult = await pool.query(
+                    'SELECT message FROM level_up_messages WHERE guild_id = $1 AND level = $2',
+                    [guildId, newLevel]
+                );
+                let messageContent = levelMessageResult.rows[0]?.message;
+
+                if (!messageContent) {
+                    const defaultMessageResult = await pool.query(
+                        'SELECT default_level_message FROM xp_settings WHERE guild_id = $1',
+                        [guildId]
+                    );
+                    messageContent = defaultMessageResult.rows[0]?.default_level_message ||
+                        'Félicitations {user}, tu es désormais niveau {level} ! Continue d’explorer tes désirs intimes sur le Donjon. 😈';
+                }
+
+                messageContent = messageContent
+                    .replace('{user}', `<@${userId}>`)
+                    .replace('{level}', newLevel);
+
+                // Envoyer l’annonce
+                const channelIdResult = await pool.query(
+                    'SELECT level_up_channel FROM xp_settings WHERE guild_id = $1',
+                    [guildId]
+                );
+                const channelId = channelIdResult.rows[0]?.level_up_channel;
+                const channel = channelId ? reaction.message.guild.channels.cache.get(channelId) : reaction.message.channel;
+
+                if (channel && channel.isTextBased()) {
+                    await channel.send({ content: messageContent });
+                    console.log(`Niveau ${newLevel} annoncé pour ${user.tag} dans #${channel.name}`);
+                }
+            }
+        } catch (error) {
+            console.error(`[MessageReactionAdd] Erreur pour ${user.tag} :`, error.message, error.stack);
+        }
+    },
+};

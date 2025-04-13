@@ -28,6 +28,9 @@ module.exports = {
                 return;
             }
 
+            // Ajouter un léger délai pour éviter Unknown interaction
+            await new Promise(resolve => setTimeout(resolve, 100));
+
             // Différer la réponse immédiatement
             await interaction.deferReply({ ephemeral: true });
             console.log('deferReply envoyé');
