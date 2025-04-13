@@ -6,6 +6,7 @@ const fs = require('fs').promises;
 const path = require('path');
 require('dotenv').config();
 const pool = require('./db');
+const express = require('express');
 
 // Initialiser le client Discord avec les intents nécessaires
 const client = new Client({
@@ -18,9 +19,25 @@ const client = new Client({
     ]
 });
 
+// Initialise le serveur Express pour le monitoring et health checks
+const app = express();
+
+// Endpoint Health Check pour Render
+app.get('/health', (req, res) => {
+    res.status(200).send('Maid babe est en bonne santé !');
+});
+
+// Endpoint racine pour vérifier manuellement que le bot est en vie
+app.get('/', (req, res) => res.send('Ta servante dévouée, Maid babe, est vivante !'));
+
+// Définit le port (fourni par Render ou 8000 par défaut)
+const port = process.env.PORT || 8000;
+app.listen(port, () => console.log(`Serveur Express démarré sur le port ${port}`));
+
 // Fonction pour initialiser les tables de la base de données
 async function initDatabase() {
     try {
+        // Créer la table des avertissements
         await pool.query(`
             CREATE TABLE IF NOT EXISTS warns (
                 id SERIAL PRIMARY KEY,
@@ -31,14 +48,7 @@ async function initDatabase() {
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS warn_removed_roles (
-                guild_id TEXT NOT NULL,
-                user_id TEXT NOT NULL,
-                removed_roles TEXT DEFAULT '[]',
-                PRIMARY KEY (guild_id, user_id)
-            )
-        `);
+
         // Créer la table pour le système d’XP
         await pool.query(`
             CREATE TABLE IF NOT EXISTS xp (
@@ -80,7 +90,7 @@ async function initDatabase() {
         // Créer la table pour les paramètres des rôles vocaux
         await pool.query(`
             CREATE TABLE IF NOT EXISTS voice_role_settings (
-                guild_id TEXT NOT NULL,
+                guild_id TEXT NOT NOT NULL,
                 voice_channel_id TEXT NOT NULL,
                 role_id TEXT NOT NULL,
                 text_channel_id TEXT NOT NULL,
