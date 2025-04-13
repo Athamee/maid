@@ -63,11 +63,11 @@ module.exports = {
             // Gérer les menus déroulants
             else if (interaction.isStringSelectMenu()) {
                 console.log(`Menu déroulant cliqué : ${interaction.customId}`);
-                const command = interaction.client.commands.get('ticketmenu');
+                const command = interaction.client.commands.get('ticket-menu');
                 if (!command) {
-                    console.warn('Commande ticketmenu introuvable pour les menus !');
+                    console.warn('Commande ticket-menu introuvable pour les menus !');
                     if (!interaction.replied && !interaction.deferred) {
-                        await interaction.reply({ content: 'Erreur : commande ticketmenu introuvable !', ephemeral: true });
+                        await interaction.reply({ content: 'Erreur : commande ticket-menu introuvable !', ephemeral: true });
                     }
                     return;
                 }
