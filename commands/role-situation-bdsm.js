@@ -3,7 +3,7 @@ const path = require('path');
 
 module.exports = {
     // Définition de la commande
-    commandDatas: new SlashCommandBuilder()
+    data: new SlashCommandBuilder()
         .setName('role-situation-bdsm')
         .setDescription('Sélectionnez votre situation BDSM.'),
 

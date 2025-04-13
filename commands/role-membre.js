@@ -4,7 +4,7 @@ const path = require('path');
 
 module.exports = {
     // Définition de la commande
-    commandDatas: new SlashCommandBuilder()
+    data: new SlashCommandBuilder()
         .setName('role-membre')
         .setDescription('Attribuez le rôle de membre.'),
 

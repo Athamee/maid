@@ -3,7 +3,7 @@ const path = require('path');
 
 module.exports = {
     // Définition de la commande
-    commandDatas: new SlashCommandBuilder()
+    data: new SlashCommandBuilder()
         .setName('role-evenement')
         .setDescription('Sélectionnez vos préférences pour les événements.'),
 
