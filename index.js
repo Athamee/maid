@@ -1,5 +1,5 @@
 // Importer les modules nécessaires
-const { Client, GatewayIntentBits, Collection } = require('discord.js'); // Ajout de Collection
+const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord.js');
 const fs = require('fs').promises;
@@ -147,14 +147,14 @@ async function loadCommands() {
                 const command = require(filePath);
                 if ('data' in command && 'execute' in command) {
                     commands.push(command.data.toJSON());
-                    client.commands.set(command.data.name, command); // Ajout à client.commands
+                    client.commands.set(command.data.name, command);
                     console.log(`Commande chargée : ${file}`);
                 } else {
                     console.warn(`[WARNING] La commande à ${filePath} manque une propriété 'data' ou 'execute'.`);
                 }
             }
         }
-        console.log(`Total commandes chargées : ${client.commands.size}`); // Log pour vérifier
+        console.log(`Total commandes chargées : ${client.commands.size}`);
     } catch (error) {
         console.error('Erreur lors du chargement des commandes :', error.stack);
     }
@@ -203,6 +203,7 @@ async function loadEvents() {
     try {
         await initDatabase();
         await loadCommands();
+        console.log('client.commands prêt pour les interactions'); // Ajout pour confirmer
         await deployCommands();
         await loadEvents();
         await client.login(process.env.TOKEN);

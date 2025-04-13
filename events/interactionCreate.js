@@ -1,9 +1,10 @@
+// Importer les modules nécessaires
 module.exports = {
     name: 'interactionCreate',
     async execute(interaction) {
       console.log(`Interaction reçue : ${interaction.type}, commande : ${interaction.commandName || interaction.customId || 'aucune'}, utilisateur : ${interaction.user.tag}`);
   
-      // Vérifie si client.commands existe
+      // Vérifier si client.commands est initialisé
       if (!interaction.client.commands) {
         console.error('Erreur : client.commands est undefined !');
         if (!interaction.replied && !interaction.deferred) {
@@ -12,6 +13,7 @@ module.exports = {
         return;
       }
   
+      // Gérer les commandes slash
       if (interaction.isCommand()) {
         const command = interaction.client.commands.get(interaction.commandName);
         if (!command) {
@@ -34,6 +36,7 @@ module.exports = {
         }
       }
   
+      // Gérer les boutons
       if (interaction.isButton()) {
         console.log(`Bouton cliqué : ${interaction.customId}`);
         const command = interaction.client.commands.get('ticket');
@@ -45,14 +48,16 @@ module.exports = {
           return;
         }
         try {
-          if (interaction.customId === 'ticket_type_6' && command.handleButtonInteraction) {
+          // Extraire ticketType à partir de customId
+          let ticketType = interaction.customId; // Par exemple, "ticket_type_6" ou "close_ticket"
+          if (ticketType === 'ticket_type_6' && command.handleButtonInteraction) {
             console.log(`Bouton ticket_type_6 cliqué par ${interaction.user.tag}`);
-            await command.handleButtonInteraction(interaction);
-          } else if (interaction.customId === 'close_ticket' && command.handleCloseTicket) {
+            await command.handleButtonInteraction(interaction, ticketType);
+          } else if (ticketType === 'close_ticket' && command.handleCloseTicket) {
             console.log(`Bouton close_ticket cliqué par ${interaction.user.tag}`);
             await command.handleCloseTicket(interaction);
           } else {
-            console.warn(`Bouton inconnu : ${interaction.customId}`);
+            console.warn(`Bouton inconnu : ${ticketType}`);
             if (!interaction.replied && !interaction.deferred) {
               await interaction.reply({ content: 'Action non reconnue !', ephemeral: true });
             }
