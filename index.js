@@ -1,4 +1,3 @@
-// index.js
 // Importer les modules nécessaires
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { REST } = require('@discordjs/rest');
@@ -203,9 +202,17 @@ const eventsPath = path.join(__dirname, 'events');
 async function loadEvents() {
     try {
         console.log('Début chargement des événements...');
+        // Vérifier si le dossier events existe
+        try {
+            await fs.access(eventsPath);
+        } catch (error) {
+            console.error(`Erreur : Le dossier ${eventsPath} n’existe pas ou est inaccessible :`, error.message);
+            return;
+        }
         const eventFiles = await fs.readdir(eventsPath);
         if (eventFiles.length === 0) {
-            console.warn('Aucun fichier trouvé dans events/');
+            console.error('Erreur : Aucun fichier trouvé dans events/');
+            return;
         }
         for (const file of eventFiles) {
             if (file.endsWith('.js')) {
