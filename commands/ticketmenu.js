@@ -22,7 +22,13 @@ module.exports = {
             // Log début commande
             console.log(`Début de /ticket-menu par ${interaction.member.user.tag}`);
 
-            // Différer la réponse
+            // Vérifier si l’interaction est valide avant defer
+            if (!interaction.isRepliable()) {
+                console.error('Interaction non répliable dans execute');
+                return;
+            }
+
+            // Différer la réponse immédiatement
             await interaction.deferReply({ ephemeral: true });
             console.log('deferReply envoyé');
 
@@ -84,13 +90,14 @@ module.exports = {
         } catch (error) {
             console.error('Erreur dans execute de ticket-menu :', error.message, error.stack);
             try {
-                await interaction.editReply({
+                // Tenter un reply si editReply échoue
+                await interaction.reply({
                     content: `Erreur lors de l’envoi du menu : ${error.message}`,
                     ephemeral: true
                 });
-                console.log('editReply erreur envoyé');
+                console.log('reply erreur envoyé');
             } catch (replyError) {
-                console.error('Erreur lors de editReply :', replyError.message, replyError.stack);
+                console.error('Erreur lors de reply :', replyError.message, replyError.stack);
             }
         }
     },
@@ -102,6 +109,12 @@ module.exports = {
         // Vérifier customId
         if (interaction.customId !== 'select_ticket') {
             console.log(`customId ${interaction.customId} ignoré`);
+            return;
+        }
+
+        // Ignorer si déjà traité
+        if (interaction.deferred || interaction.replied) {
+            console.log(`Interaction select_ticket déjà traitée pour ${interaction.member.user.tag}`);
             return;
         }
 
