@@ -104,8 +104,11 @@ module.exports = {
 
     async handleMenuInteraction(interaction) {
         // Log toutes interactions reçues
-        console.log(`Interaction menu reçue : customId=${interaction.customId}, user=${interaction.member.user.tag}`);
+        console.log(`Interaction menu reçue : customId=${interaction.customId}, user=${interaction.member?.user?.tag || 'inconnu'}`);
         
+        // Vérifier début fonction
+        console.log('Démarrage handleMenuInteraction');
+
         // Vérifier customId
         if (interaction.customId !== 'select_ticket') {
             console.log(`customId ${interaction.customId} ignoré`);
@@ -114,12 +117,17 @@ module.exports = {
 
         // Ignorer si déjà traité
         if (interaction.deferred || interaction.replied) {
-            console.log(`Interaction select_ticket déjà traitée pour ${interaction.member.user.tag}`);
+            console.log(`Interaction select_ticket déjà traitée pour ${interaction.member?.user?.tag || 'inconnu'}`);
             return;
         }
 
+        // Vérifier member et guild
         const member = interaction.member;
         const guild = interaction.guild;
+        if (!member || !guild) {
+            console.error('Member ou guild manquant dans interaction');
+            return;
+        }
 
         // Vérifier interaction.values
         console.log('Valeurs reçues :', interaction.values);
@@ -207,7 +215,7 @@ module.exports = {
 
     async handleCloseTicket(interaction) {
         // Log toutes interactions reçues
-        console.log(`Interaction close_ticket reçue : customId=${interaction.customId}, user=${interaction.member.user.tag}`);
+        console.log(`Interaction close_ticket reçue : customId=${interaction.customId}, user=${interaction.member?.user?.tag || 'inconnu'}`);
         
         // Vérifier customId
         if (interaction.customId !== 'close_ticket') {
