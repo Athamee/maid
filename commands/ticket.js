@@ -113,8 +113,11 @@ module.exports = {
                         ↳`)
                     .setColor('#FFAA00');
 
-                // Créer le ticket
-                await ticketUtils.createTicketChannel(interaction.client, guild, member, {
+                // Définir ticketType
+                const ticketType = 'ticket_type_6';
+
+                // Créer le ticket avec ticketType et message séparés
+                await ticketUtils.createTicketChannel(interaction.client, guild, member, ticketType, {
                     content: `<@${member.id}>, <@&1094318706487734483>`,
                     embeds: [embed],
                 });
