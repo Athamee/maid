@@ -125,6 +125,13 @@ module.exports = {
         console.log(`Interaction select_ticket pour ${member.user.tag} avec type ${selectedType}`);
 
         try {
+            // Vérifier si l’interaction est valide avant defer
+            console.log('Avant deferReply dans handleMenuInteraction');
+            if (!interaction.isRepliable()) {
+                console.error(`Interaction non répliable pour ${selectedType}`);
+                return;
+            }
+
             // Différer la réponse
             await interaction.deferReply({ ephemeral: true });
             console.log('deferReply envoyé dans handleMenuInteraction');
@@ -179,13 +186,14 @@ module.exports = {
         } catch (error) {
             console.error(`Erreur lors de la création du ticket (${selectedType}) :`, error.message, error.stack);
             try {
-                await interaction.editReply({
+                // Tenter un reply si editReply échoue
+                await interaction.reply({
                     content: `Erreur lors de la création du ticket : ${error.message}`,
                     ephemeral: true
                 });
-                console.log('editReply erreur envoyé dans handleMenuInteraction');
+                console.log('reply erreur envoyé dans handleMenuInteraction');
             } catch (replyError) {
-                console.error('Erreur lors de editReply dans handleMenuInteraction :', replyError.message, replyError.stack);
+                console.error('Erreur lors de reply dans handleMenuInteraction :', replyError.message, replyError.stack);
             }
         }
     },
