@@ -171,6 +171,13 @@ module.exports = {
                     return;
                 }
 
+                // Confirmer fermeture avant de supprimer le salon
+                await interaction.editReply({
+                    content: 'Ticket fermé avec succès.',
+                    ephemeral: true
+                });
+                console.log('editReply envoyé avant fermeture');
+
                 // Fermer le ticket
                 const channel = interaction.channel;
                 console.log(`Début fermeture ticket ${channel.name}`);
@@ -182,22 +189,18 @@ module.exports = {
                     throw new Error(result.error || 'Échec de la fermeture du ticket');
                 }
 
-                // Confirmer fermeture
-                await interaction.editReply({
-                    content: 'Ticket fermé avec succès.',
-                    ephemeral: true
-                });
                 console.log(`Ticket ${channel.name} fermé par ${member.user.tag}`);
             } catch (error) {
                 console.error('Erreur dans handleCloseTicket :', error.message, error.stack);
                 try {
-                    await interaction.editReply({
+                    // Tenter un reply si editReply échoue
+                    await interaction.reply({
                         content: `Erreur lors de la fermeture du ticket : ${error.message}`,
                         ephemeral: true
                     });
-                    console.log('editReply erreur envoyé dans handleCloseTicket');
+                    console.log('reply erreur envoyé dans handleCloseTicket');
                 } catch (replyError) {
-                    console.error('Erreur lors de editReply dans handleCloseTicket :', replyError.message, replyError.stack);
+                    console.error('Erreur lors de reply dans handleCloseTicket :', replyError.message, replyError.stack);
                 }
             }
         }
