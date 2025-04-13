@@ -1,5 +1,5 @@
 // Importer les modules nécessaires
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, Collection } = require('discord.js'); // Ajout de Collection
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord.js');
 const fs = require('fs').promises;
@@ -18,6 +18,9 @@ const client = new Client({
         GatewayIntentBits.GuildVoiceStates
     ]
 });
+
+// Initialiser client.commands comme une Collection
+client.commands = new Collection();
 
 // Initialise le serveur Express pour le monitoring et health checks
 const app = express();
@@ -144,12 +147,14 @@ async function loadCommands() {
                 const command = require(filePath);
                 if ('data' in command && 'execute' in command) {
                     commands.push(command.data.toJSON());
+                    client.commands.set(command.data.name, command); // Ajout à client.commands
                     console.log(`Commande chargée : ${file}`);
                 } else {
                     console.warn(`[WARNING] La commande à ${filePath} manque une propriété 'data' ou 'execute'.`);
                 }
             }
         }
+        console.log(`Total commandes chargées : ${client.commands.size}`); // Log pour vérifier
     } catch (error) {
         console.error('Erreur lors du chargement des commandes :', error.stack);
     }
