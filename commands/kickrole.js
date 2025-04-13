@@ -35,6 +35,7 @@ module.exports = {
         const guild = interaction.guild;
         const inviteLink = process.env.INVITE_LINK;
         const kickChannelId = process.env.KICK_CHANNEL_ID;
+        const ticketLogGuildId = process.env.TICKET_LOG_GUILD_ID;
 
         // Vérifier INVITE_LINK
         if (!inviteLink) {
@@ -54,9 +55,28 @@ module.exports = {
             });
         }
 
+        // Vérifier TICKET_LOG_GUILD_ID
+        if (!ticketLogGuildId) {
+            console.error('[KickRole] Erreur : TICKET_LOG_GUILD_ID non défini dans .env');
+            return interaction.editReply({
+                content: 'Erreur : Serveur de logs non configuré (TICKET_LOG_GUILD_ID manquant).',
+                ephemeral: true
+            });
+        }
+
         try {
+            // Vérifier serveur de logs
+            const logGuild = await interaction.client.guilds.fetch(ticketLogGuildId).catch(() => null);
+            if (!logGuild) {
+                console.error(`[KickRole] Erreur : TICKET_LOG_GUILD_ID (${ticketLogGuildId}) introuvable`);
+                return interaction.editReply({
+                    content: 'Erreur : Le serveur de logs (TICKET_LOG_GUILD_ID) est introuvable.',
+                    ephemeral: true
+                });
+            }
+
             // Vérifier canal de logs
-            const kickChannel = guild.channels.cache.get(kickChannelId);
+            const kickChannel = logGuild.channels.cache.get(kickChannelId);
             if (!kickChannel || !kickChannel.isTextBased()) {
                 console.error(`[KickRole] Erreur : KICK_CHANNEL_ID (${kickChannelId}) introuvable ou non textuel`);
                 return interaction.editReply({
