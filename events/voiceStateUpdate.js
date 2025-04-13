@@ -183,58 +183,45 @@ module.exports = {
                     }
                 }
 
-                // Vérifier si le canal est vide et le renouveler
+                // Vérifier si le canal est vide et renouveler le canal textuel uniquement
                 const oldChannel = oldState.channel;
                 if (oldChannel && oldChannel.members.size === 0) {
                     const voiceRole = voiceRoleSettings.find(setting => setting.voice_channel_id === oldChannel.id);
-                    if (voiceRole) {
-                        console.log(`[VoiceStateUpdate] Canal vocal ${oldChannel.name} vide, renouvellement...`);
+                    if (voiceRole && voiceRole.text_channel_id) {
+                        console.log(`[VoiceStateUpdate] Canal vocal ${oldChannel.name} vide, renouvellement du canal textuel...`);
                         const botMember = newState.guild.members.me;
                         if (!botMember.permissions.has(PermissionsBitField.Flags.ManageChannels)) {
-                            console.error(`[VoiceStateUpdate] Le bot manque la permission ManageChannels pour renouveler ${oldChannel.id}`);
+                            console.error(`[VoiceStateUpdate] Le bot manque la permission ManageChannels pour renouveler le canal textuel ${voiceRole.text_channel_id}`);
                             return;
                         }
 
-                        // Stocker les paramètres du canal
-                        const channelName = oldChannel.name;
-                        const parentId = oldChannel.parentId;
-                        const roleId = voiceRole.role_id;
-                        const textChannelId = voiceRole.text_channel_id;
-
-                        // Supprimer l’ancien canal vocal
-                        await oldChannel.delete('Canal vocal vide, renouvellement');
-                        console.log(`[VoiceStateUpdate] Canal vocal ${oldChannel.name} supprimé`);
-
                         // Supprimer l’ancien canal textuel s’il existe
-                        let newTextChannelId = textChannelId;
-                        if (textChannelId) {
-                            const oldTextChannel = newState.guild.channels.cache.get(textChannelId);
-                            if (oldTextChannel) {
-                                await oldTextChannel.delete('Canal textuel lié renouvelé');
-                                console.log(`[VoiceStateUpdate] Canal textuel ${oldTextChannel.name} supprimé`);
-                            } else {
-                                console.log(`[VoiceStateUpdate] Aucun canal textuel trouvé pour text_channel_id=${textChannelId}`);
-                            }
+                        const oldTextChannel = newState.guild.channels.cache.get(voiceRole.text_channel_id);
+                        if (oldTextChannel) {
+                            await oldTextChannel.delete('Canal textuel lié renouvelé');
+                            console.log(`[VoiceStateUpdate] Canal textuel ${oldTextChannel.name} supprimé`);
+                        } else {
+                            console.log(`[VoiceStateUpdate] Aucun canal textuel trouvé pour text_channel_id=${voiceRole.text_channel_id}`);
                         }
 
-                        // Créer un nouveau canal vocal
-                        const newChannel = await newState.guild.channels.create({
-                            name: channelName,
-                            type: oldChannel.type,
-                            parent: parentId,
+                        // Créer un nouveau canal textuel
+                        const newTextChannel = await newState.guild.channels.create({
+                            name: `💬-${oldChannel.name}`,
+                            type: ChannelType.GuildText,
+                            parent: oldChannel.parentId,
                             permissionOverwrites: [
                                 {
                                     id: newState.guild.id, // @everyone
                                     deny: [PermissionsBitField.Flags.ViewChannel],
                                 },
                                 {
-                                    id: roleId, // Rôle associé
+                                    id: voiceRole.role_id, // Rôle associé
                                     allow: [
                                         PermissionsBitField.Flags.ViewChannel,
+                                        PermissionsBitField.Flags.SendMessages,
                                         PermissionsBitField.Flags.ReadMessageHistory,
                                         PermissionsBitField.Flags.AddReactions,
                                         PermissionsBitField.Flags.AttachFiles,
-                                        PermissionsBitField.Flags.SendMessages,
                                         PermissionsBitField.Flags.EmbedLinks,
                                         PermissionsBitField.Flags.UseExternalEmojis,
                                     ],
@@ -250,52 +237,14 @@ module.exports = {
                                 },
                             ],
                         });
-                        console.log(`[VoiceStateUpdate] Nouveau canal vocal ${newChannel.name} créé avec rôle ${roleId}`);
+                        console.log(`[VoiceStateUpdate] Nouveau canal textuel ${newTextChannel.name} créé avec rôle ${voiceRole.role_id}`);
 
-                        // Créer un nouveau canal textuel s’il y avait un text_channel_id
-                        if (textChannelId) {
-                            const newTextChannel = await newState.guild.channels.create({
-                                name: `💬-${channelName}`,
-                                type: ChannelType.GuildText,
-                                parent: parentId,
-                                permissionOverwrites: [
-                                    {
-                                        id: newState.guild.id, // @everyone
-                                        deny: [PermissionsBitField.Flags.ViewChannel],
-                                    },
-                                    {
-                                        id: roleId, // Rôle associé
-                                        allow: [
-                                            PermissionsBitField.Flags.ViewChannel,
-                                            PermissionsBitField.Flags.SendMessages,
-                                            PermissionsBitField.Flags.ReadMessageHistory,
-                                            PermissionsBitField.Flags.AddReactions,
-                                            PermissionsBitField.Flags.AttachFiles,
-                                            PermissionsBitField.Flags.EmbedLinks,
-                                            PermissionsBitField.Flags.UseExternalEmojis,
-                                        ],
-                                    },
-                                    {
-                                        id: newState.client.user.id, // Bot
-                                        allow: [
-                                            PermissionsBitField.Flags.ViewChannel,
-                                            PermissionsBitField.Flags.ManageChannels,
-                                            PermissionsBitField.Flags.SendMessages,
-                                            PermissionsBitField.Flags.ReadMessageHistory,
-                                        ],
-                                    },
-                                ],
-                            });
-                            newTextChannelId = newTextChannel.id;
-                            console.log(`[VoiceStateUpdate] Nouveau canal textuel ${newTextChannel.name} créé avec rôle ${roleId}`);
-                        }
-
-                        // Mettre à jour voice_role_settings avec les nouveaux IDs
+                        // Mettre à jour voice_role_settings avec le nouvel ID du canal textuel
                         await pool.query(
-                            'UPDATE voice_role_settings SET voice_channel_id = $3, text_channel_id = $4 WHERE guild_id = $1 AND voice_channel_id = $2',
-                            [guildId, oldChannel.id, newChannel.id, newTextChannelId]
+                            'UPDATE voice_role_settings SET text_channel_id = $3 WHERE guild_id = $1 AND voice_channel_id = $2',
+                            [guildId, oldChannel.id, newTextChannel.id]
                         );
-                        console.log(`[VoiceStateUpdate] voice_role_settings mis à jour : voice_channel_id=${newChannel.id}, text_channel_id=${newTextChannelId}`);
+                        console.log(`[VoiceStateUpdate] voice_role_settings mis à jour : text_channel_id=${newTextChannel.id}`);
                     }
                 }
             }
