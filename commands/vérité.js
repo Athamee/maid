@@ -8,9 +8,9 @@ module.exports = {
         .setDescription('Pose une question aléatoire à répondre sincèrement (uniquement dans le salon autorisé)'),
     async execute(interaction) {
         // Vérifier si la commande est utilisée dans le salon autorisé
-        const veriteChannelId = process.env.VERITE_CHANNEL_ID;
+        const veriteChannelId = process.env.VERITEE_CHANNEL_ID;
         if (!veriteChannelId) {
-            console.error('[Vérité] Erreur : VERITE_CHANNEL_ID non défini dans .env');
+            console.error('[Vérité] Erreur : VERITEE_CHANNEL_ID non défini dans .env');
             return interaction.reply({
                 content: 'Erreur : Salon non configuré. Contactez un administrateur.',
                 ephemeral: true

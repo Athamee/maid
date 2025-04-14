@@ -1,3 +1,4 @@
+// commands/role-evenement.js
 const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, AttachmentBuilder } = require('discord.js');
 const path = require('path');
 
@@ -33,7 +34,9 @@ module.exports = {
             // Définir les boutons pour les événements
             const eventButtons = [
                 { desc: "Animations", emoji: '<:autre_animation:1340092135428325467>', role: process.env.ANIMATION_ROLE_ID },
-                { desc: "Vocal", emoji: '<:autre_vocal:1340092138616000552>', role: process.env.VOCAL_ROLE_ID }
+                { desc: "Vocal", emoji: '<:autre_vocal:1340092138616000552>', role: process.env.VOCAL_ROLE_ID },
+                // Ajout du bouton pour le rôle Vérité avec l'emoji et VERITE_ROLE_ID
+                { desc: "Vérité", emoji: '<:donjon_role_verite:1361442311841779772>', role: process.env.VERITE_ROLE_ID }
             ];
 
             // Créer les boutons
