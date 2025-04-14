@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, InteractionResponseFlags } = require('discord.js');
 require('dotenv').config();
 
 module.exports = {
@@ -66,6 +66,9 @@ module.exports = {
     handleButtonInteraction: async (interaction) => {
         console.log(`Interaction bouton 'accept_reglement' par ${interaction.user.tag}`);
 
+        // Déférer la réponse immédiatement pour éviter l’expiration de l’interaction (3s limite)
+        await interaction.deferReply({ ephemeral: true });
+
         try {
             const member = interaction.member;
             const arrivantRoleId = process.env.ARRIVANT_ROLE_ID;
@@ -79,7 +82,10 @@ module.exports = {
             // Vérification des rôles
             if (!acceptedRole) {
                 console.error(`Rôle REGLEMENT_ACCEPTED (${reglementAcceptedRoleId}) introuvable`);
-                return interaction.reply({ content: 'Erreur : Le rôle REGLEMENT_ACCEPTED est introuvable.', ephemeral: true });
+                return interaction.editReply({ 
+                    content: 'Erreur : Le rôle REGLEMENT_ACCEPTED est introuvable.', 
+                    flags: InteractionResponseFlags.Ephemeral 
+                });
             }
             if (!unacceptedRole) {
                 console.warn(`Rôle ARRIVANT (${arrivantRoleId}) introuvable, poursuite sans retrait`);
@@ -89,12 +95,18 @@ module.exports = {
             const botMember = interaction.guild.members.me;
             if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) {
                 console.error('Le bot n’a pas la permission ManageRoles');
-                return interaction.reply({ content: 'Erreur : Le bot n’a pas la permission de gérer les rôles.', ephemeral: true });
+                return interaction.editReply({ 
+                    content: 'Erreur : Le bot n’a pas la permission de gérer les rôles.', 
+                    flags: InteractionResponseFlags.Ephemeral 
+                });
             }
 
             if (acceptedRole.position > botMember.roles.highest.position) {
                 console.error(`Le rôle REGLEMENT_ACCEPTED (${reglementAcceptedRoleId}) est plus haut que le rôle du bot`);
-                return interaction.reply({ content: 'Erreur : Le rôle à attribuer est trop haut dans la hiérarchie pour le bot.', ephemeral: true });
+                return interaction.editReply({ 
+                    content: 'Erreur : Le rôle à attribuer est trop haut dans la hiérarchie pour le bot.', 
+                    flags: InteractionResponseFlags.Ephemeral 
+                });
             }
             if (unacceptedRole && unacceptedRole.position > botMember.roles.highest.position) {
                 console.warn(`Le rôle ARRIVANT (${arrivantRoleId}) est plus haut que le rôle du bot, impossible de le retirer`);
@@ -103,9 +115,9 @@ module.exports = {
             // Si le membre a déjà le rôle ACCEPTED
             if (member.roles.cache.has(reglementAcceptedRoleId)) {
                 console.log(`${member.user.tag} a déjà le rôle ${acceptedRole.name}`);
-                return interaction.reply({
+                return interaction.editReply({
                     content: `Vous avez déjà le rôle **${acceptedRole.name}**.`,
-                    ephemeral: true
+                    flags: InteractionResponseFlags.Ephemeral
                 });
             }
 
@@ -123,15 +135,15 @@ module.exports = {
             await member.roles.add(acceptedRole);
             console.log(`Rôle ${acceptedRole.name} ajouté à ${member.user.tag}`);
 
-            await interaction.reply({
+            await interaction.editReply({
                 content: `Vous avez accepté le règlement ! Rôle **${acceptedRole.name}** obtenu.`,
-                ephemeral: true
+                flags: InteractionResponseFlags.Ephemeral
             });
         } catch (error) {
             console.error(`Erreur dans l’interaction bouton pour ${interaction.user.tag} :`, error.stack);
-            await interaction.reply({
+            await interaction.editReply({
                 content: 'Erreur lors de l’acceptation du règlement. Contactez un administrateur.',
-                ephemeral: true
+                flags: InteractionResponseFlags.Ephemeral
             });
         }
     }
