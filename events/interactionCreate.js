@@ -1,5 +1,4 @@
 // interactionCreate.js
-// Importer les modules nécessaires
 module.exports = {
     name: 'interactionCreate',
     async execute(interaction) {
@@ -36,24 +35,28 @@ module.exports = {
             // Gérer les boutons
             else if (interaction.isButton()) {
                 console.log(`Bouton cliqué : ${interaction.customId}`);
-                const command = interaction.client.commands.get('ticket');
-                if (!command) {
-                    console.warn('Commande ticket introuvable pour les boutons !');
-                    if (!interaction.replied && !interaction.deferred) {
-                        await interaction.reply({ content: 'Erreur : commande ticket introuvable !', ephemeral: true });
+
+                // Liste des commandes avec gestionnaires de boutons
+                const buttonHandlers = {
+                    'accept_reglement': { commandName: 'reglement', handler: 'handleButtonInteraction' },
+                    'ticket_type_6': { commandName: 'ticket', handler: 'handleButtonInteraction' },
+                    'close_ticket': { commandName: 'ticket', handler: 'handleCloseTicket' },
+                };
+
+                const buttonInfo = buttonHandlers[interaction.customId];
+                if (buttonInfo) {
+                    const command = interaction.client.commands.get(buttonInfo.commandName);
+                    if (command && command[buttonInfo.handler]) {
+                        console.log(`Bouton ${interaction.customId} géré par ${buttonInfo.commandName}.${buttonInfo.handler}`);
+                        await command[buttonInfo.handler](interaction, interaction.customId);
+                    } else {
+                        console.warn(`Commande ${buttonInfo.commandName} ou gestionnaire ${buttonInfo.handler} introuvable`);
+                        if (!interaction.replied && !interaction.deferred) {
+                            await interaction.reply({ content: 'Erreur : gestionnaire de bouton introuvable !', ephemeral: true });
+                        }
                     }
-                    return;
-                }
-                const ticketType = String(interaction.customId);
-                console.log(`ticketType passé à handleButtonInteraction : ${ticketType}`);
-                if (ticketType === 'ticket_type_6' && command.handleButtonInteraction) {
-                    console.log(`Bouton ticket_type_6 cliqué par ${interaction.user.tag}`);
-                    await command.handleButtonInteraction(interaction, ticketType);
-                } else if (ticketType === 'close_ticket' && command.handleCloseTicket) {
-                    console.log(`Bouton close_ticket cliqué par ${interaction.user.tag}`);
-                    await command.handleCloseTicket(interaction);
                 } else {
-                    console.warn(`Bouton inconnu : ${ticketType}`);
+                    console.warn(`Bouton inconnu : ${interaction.customId}`);
                     if (!interaction.replied && !interaction.deferred) {
                         await interaction.reply({ content: 'Action non reconnue !', ephemeral: true });
                     }
