@@ -1,4 +1,3 @@
-// interactionCreate.js
 module.exports = {
     name: 'interactionCreate',
     async execute(interaction) {
@@ -41,9 +40,23 @@ module.exports = {
                     'accept_reglement': { commandName: 'reglement', handler: 'handleButtonInteraction' },
                     'ticket_type_6': { commandName: 'ticket', handler: 'handleButtonInteraction' },
                     'close_ticket': { commandName: 'ticket', handler: 'handleCloseTicket' },
+                    // Ajout des préfixes pour les boutons de rôles (14/04/2025) pour gérer les interactions des commandes de rôles
+                    'age_': { commandName: 'role-age', handler: 'handleButtonInteraction' },
+                    'connaissance-bdsm_': { commandName: 'role-connaissance-bdsm', handler: 'handleButtonInteraction' },
+                    'bdsm_': { commandName: 'role-dynamique-bdsm', handler: 'handleButtonInteraction' }, // Gère aussi role-situation-bdsm (même préfixe et logique identique)
+                    'event_': { commandName: 'role-evenement', handler: 'handleButtonInteraction' },
+                    'experience-bdsm_': { commandName: 'role-experience-bdsm', handler: 'handleButtonInteraction' },
+                    'experience-vanille_': { commandName: 'role-experience-vanille', handler: 'handleButtonInteraction' },
+                    'genre_': { commandName: 'role-genre', handler: 'handleButtonInteraction' },
+                    'membre_': { commandName: 'role-membre', handler: 'handleButtonInteraction' },
+                    'dm_': { commandName: 'role-message-prive', handler: 'handleButtonInteraction' },
+                    'orientation_': { commandName: 'role-orientation', handler: 'handleButtonInteraction' },
+                    'pronom_': { commandName: 'role-pronom', handler: 'handleButtonInteraction' },
+                    'relation_': { commandName: 'role-situation-relationnelle', handler: 'handleButtonInteraction' },
                 };
 
-                const buttonInfo = buttonHandlers[interaction.customId];
+                // Vérifier si le customId commence par un préfixe connu (pour gérer les customId dynamiques comme bdsm_<roleId>_<index>)
+                const buttonInfo = Object.entries(buttonHandlers).find(([key]) => interaction.customId.startsWith(key))?.[1];
                 if (buttonInfo) {
                     const command = interaction.client.commands.get(buttonInfo.commandName);
                     if (command && command[buttonInfo.handler]) {
