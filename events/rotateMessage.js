@@ -1,5 +1,7 @@
 // rotateMessage.js
-// Toutes les 24h, copie le message le plus ancien d’un salon spécifique et le reposte, puis supprime l’original
+// Toutes les 24h, copie le message le plus ancien d’un salon spécifique et le reposte, 
+// inclut les pièces jointes, ping un rôle, puis supprime l’original après vérification.
+// Les messages de bots sont autorisés pour la rotation des pubs partenaires.
 const { Client, PermissionsBitField } = require('discord.js');
 const cron = require('node-cron');
 const pool = require('../db');
@@ -50,28 +52,33 @@ module.exports = {
                     return;
                 }
 
-                // Ignorer les messages de bots
-                if (oldestMessage.author.bot) {
-                    console.log(`[RotateMessage] Message de bot ignoré dans ${channel.name}`);
-                    return;
-                }
-
                 console.log(`[RotateMessage] Message le plus ancien trouvé dans ${channel.name} : ${oldestMessage.id}, auteur=${oldestMessage.author.tag}`);
 
-                // Copier le contenu
+                // Préparer le contenu du nouveau message
                 const newMessageContent = {
-                    content: oldestMessage.content || null,
+                    // Ajout du ping du rôle MEMBRE_ROLE_ID s’il est défini
+                    content: process.env.MEMBRE_ROLE_ID ? 
+                        `<@&${process.env.MEMBRE_ROLE_ID}> ${oldestMessage.content || ''}` : 
+                        oldestMessage.content || null,
                     embeds: oldestMessage.embeds.length > 0 ? oldestMessage.embeds : [],
-                    // Fichiers non inclus pour l’instant (à confirmer)
+                    // Inclure les pièces jointes si présentes
+                    files: oldestMessage.attachments.size > 0 ? 
+                        oldestMessage.attachments.map(attachment => attachment.url) : []
                 };
 
                 // Poster le nouveau message
                 const newMessage = await channel.send(newMessageContent);
                 console.log(`[RotateMessage] Nouveau message posté dans ${channel.name} : ${newMessage.id}`);
 
-                // Supprimer l’ancien message
-                await oldestMessage.delete();
-                console.log(`[RotateMessage] Ancien message ${oldestMessage.id} supprimé dans ${channel.name}`);
+                // Vérifier que le nouveau message existe avant de supprimer l’ancien
+                if (newMessage && newMessage.id) {
+                    // Supprimer l’ancien message
+                    await oldestMessage.delete();
+                    console.log(`[RotateMessage] Ancien message ${oldestMessage.id} supprimé dans ${channel.name}`);
+                } else {
+                    console.error(`[RotateMessage] Échec de la vérification du nouveau message dans ${channel.name}`);
+                    return;
+                }
 
                 // Loguer dans un canal de logs (optionnel, si défini)
                 const logChannelId = process.env.LOG_MESSAGES_ID;
