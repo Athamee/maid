@@ -36,7 +36,7 @@ module.exports = {
             const getRequiredXp = (lvl) => 1000 + Math.pow(lvl - 1, 2) * 400;
             const xpForCurrentLevel = getRequiredXp(level); // XP requis pour atteindre le niveau actuel
             const xpForNextLevel = getRequiredXp(level + 1); // XP requis pour le prochain niveau
-            const xpProgress = totalXp - xpForCurrentLevel; // Progression dans le niveau actuel
+            const xpProgress = xpForNextLevel - totalXp; // Progression dans le niveau actuel (corrigé : XP restant pour le prochain niveau)
 
             // Récupérer les rôles du membre (exclut @everyone)
             const roles = targetMember.roles.cache
