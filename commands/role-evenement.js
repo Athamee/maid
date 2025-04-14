@@ -36,7 +36,7 @@ module.exports = {
                 { desc: "Animations", emoji: '<:autre_animation:1340092135428325467>', role: process.env.ANIMATION_ROLE_ID },
                 { desc: "Vocal", emoji: '<:autre_vocal:1340092138616000552>', role: process.env.VOCAL_ROLE_ID },
                 // Ajout du bouton pour le rôle Vérité avec l'emoji et VERITE_ROLE_ID
-                { desc: "Vérité", emoji: '<:donjon_role_verite:1361442311841779772>', role: process.env.VERITE_ROLE_ID }
+                { desc: "Vérité ou vérité", emoji: '<:donjon_role_verite:1361442311841779772>', role: process.env.VERITE_ROLE_ID }
             ];
 
             // Créer les boutons
