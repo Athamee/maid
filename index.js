@@ -257,7 +257,22 @@ async function loadEvents() {
     }
 })();
 
-// Confirmer que le bot est en ligne
+// Confirmer que le bot est en ligne et définir le statut de base
 client.on('ready', () => {
     console.log('Maid babe est en ligne !');
+
+    // Définir le statut de base au démarrage
+    try {
+        client.user.setPresence({
+            status: 'online', // Statut en ligne pour indiquer que le bot est prêt
+            activities: [{
+                name: 'Maître, j\'ai fait une petite sieste et je suis prête à te servir maintenant. 😇',
+                type: 3, // Type "Joue à..." pour un ton ludique
+                // Types possibles : 0: "Joue à...", 1: "Diffuse..." (nécessite URL), 2: "Écoute...", 3: "Regarde...", 5: "Participe à..."
+            }]
+        });
+        console.log('[Ready] Statut de base défini : Regarde Maître, j\'ai fait une petite sieste et je suis prête à te servir maintenant. 😇"');
+    } catch (error) {
+        console.error('[Ready] Erreur lors de la définition du statut de base :', error.message);
+    }
 });
