@@ -1,6 +1,9 @@
 // Importer les modules nécessaires
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 
+// Verrou simple pour concurrence (par utilisateur)
+const activeCommands = new Set();
+
 module.exports = {
     // Définir la commande
     data: new SlashCommandBuilder()
@@ -9,31 +12,38 @@ module.exports = {
 
     // Exécuter la commande
     async execute(interaction) {
+        // Créer clé unique pour verrou
+        const commandKey = `${interaction.user.id}-${interaction.commandName}`;
         console.log(`[Commands] Commande exécutée par ${interaction.user.tag} dans ${interaction.guild.name} (ID: ${interaction.guild.id})`);
 
-        try {
-            // Vérifier concurrence
-            if (interaction.deferred || interaction.replied) {
-                console.log('[Commands] Interaction déjà traitée, ignorée');
-                return;
-            }
+        // Vérifier concurrence tôt
+        if (activeCommands.has(commandKey)) {
+            console.log(`[Commands] Ignoré : ${commandKey} déjà en cours`);
+            return;
+        }
+        if (interaction.deferred || interaction.replied) {
+            console.log('[Commands] Interaction déjà traitée, ignorée');
+            return;
+        }
 
+        // Ajouter au verrou
+        activeCommands.add(commandKey);
+
+        try {
             // Différer la réponse rapidement
             console.log('[Commands] Différer la réponse');
-            await interaction.deferReply().catch(err => {
-                console.error('[Commands] Erreur dans deferReply :', err.stack);
-                throw err;
-            });
+            await interaction.deferReply();
 
             // Récupérer toutes les commandes
             console.log('[Commands] Récupération des commandes depuis client.commands');
             const commands = interaction.client.commands;
             if (!commands || commands.size === 0) {
                 console.warn('[Commands] Aucune commande trouvée dans client.commands');
-                return interaction.editReply({
+                await interaction.editReply({
                     content: 'Erreur : Aucune commande disponible.',
                     ephemeral: true
                 });
+                return;
             }
 
             // Créer un tableau d’embeds
@@ -45,7 +55,7 @@ module.exports = {
                 .setColor('#00FFAA')
                 .setTimestamp();
             let commandCount = 0;
-            let currentEmbedSize = 30 + 60; //Estimation du titre (~30) + description (~60)
+            let currentEmbedSize = 30 + 60; // Titre (~30) + description (~60)
 
             // Mapper les permissions Discord
             const permissionMap = {
@@ -60,7 +70,18 @@ module.exports = {
 
             // Parcourir les commandes
             for (const command of commands.values()) {
-                console.log(`[Commands] Traitement de la commande ${command.data.name}`);
+                // Loguer chaque commande
+                console.log(`[Commands] Traitement de la commande ${command.data?.name || 'inconnue'}`);
+
+                // Valider commande tôt
+                if (!command.data || typeof command.data.name !== 'string' || !command.data.name) {
+                    console.warn(`[Commands] Commande ignorée : nom invalide ou manquant (${JSON.stringify(command.data)})`);
+                    continue;
+                }
+                if (typeof command.data.description !== 'string' || !command.data.description) {
+                    console.warn(`[Commands] Commande ${command.data.name} ignorée : description invalide ou manquante`);
+                    continue;
+                }
 
                 // Exclure les commandes role-*
                 if (command.data.name.startsWith('role-')) {
@@ -68,38 +89,40 @@ module.exports = {
                     continue;
                 }
 
-                // Vérifier données commande
-                if (!command.data.name || !command.data.description) {
-                    console.warn(`[Commands] Commande invalide : ${JSON.stringify(command.data)}`);
-                    continue;
-                }
-
-                // Mapper permissions
+                // Mapper permissions avec sécurité
                 let permissions = 'Inconnu';
-                const permValue = command.data.default_member_permissions?.toString() || '0';
-                permissions = permissionMap[permValue] || `Permissions spécifiques (${permValue})`;
+                try {
+                    const permValue = command.data.default_member_permissions
+                        ? String(command.data.default_member_permissions)
+                        : '0';
+                    permissions = permissionMap[permValue] || `Permissions spécifiques (${permValue})`;
+                } catch (err) {
+                    console.warn(`[Commands] Erreur permissions ${command.data.name} : ${err.message}`);
+                    permissions = 'Erreur lors du calcul';
+                }
 
                 // Vérifier restrictions (ex. rôles)
                 let restrictions = 'Aucune';
-                const roleOptions = command.data.options?.filter(opt => opt.type === 8); // 8 = Role
-                if (roleOptions?.length > 0) {
-                    restrictions = 'Requiert des rôles spécifiques';
+                try {
+                    const roleOptions = command.data.options?.filter(opt => opt.type === 8) || []; // 8 = Role
+                    if (roleOptions.length > 0) {
+                        restrictions = 'Requiert des rôles spécifiques';
+                    }
+                } catch (err) {
+                    console.warn(`[Commands] Erreur restrictions ${command.data.name} : ${err.message}`);
+                    restrictions = 'Erreur lors du calcul';
                 }
 
-                // Créer champ avec validation
+                // Créer champ avec validation stricte
                 const field = {
-                    name: String(command.data.name ? `/${command.data.name}` : 'Inconnu'),
-                    value: String(
-                        command.data.description && permissions && restrictions
-                            ? `**Description** : ${command.data.description}\n**Permissions** : ${permissions}\n**Restrictions** : ${restrictions}`
-                            : 'Données manquantes'
-                    ),
+                    name: `/${command.data.name}`,
+                    value: `**Description** : ${command.data.description}\n**Permissions** : ${permissions}\n**Restrictions** : ${restrictions}`,
                     inline: false
                 };
 
-                // Vérifier type et taille du champ
+                // Vérifier type et taille
                 if (typeof field.name !== 'string' || typeof field.value !== 'string') {
-                    console.warn(`[Commands] Commande ${command.data.name} rejetée : type champ invalide`);
+                    console.warn(`[Commands] Commande ${command.data.name} rejetée : type champ invalide (name: ${typeof field.name}, value: ${typeof field.value})`);
                     continue;
                 }
                 if (field.name.length > 256 || field.value.length > 1024) {
@@ -109,9 +132,10 @@ module.exports = {
 
                 // Estimer taille du champ
                 const fieldSize = field.name.length + field.value.length;
+                console.log(`[Commands] Champ préparé pour ${command.data.name} (taille: ${fieldSize})`);
 
                 // Vérifier taille embed
-                if (currentEmbedSize + fieldSize + 50 > 5500) { // Marge pour footer
+                if (currentEmbedSize + fieldSize + 50 > 5500) {
                     console.log(`[Commands] Limite de ~5500 caractères atteinte, création d’un nouvel embed`);
                     embeds.push(currentEmbed);
                     currentEmbed = new EmbedBuilder()
@@ -138,10 +162,11 @@ module.exports = {
             // Vérifier si aucune commande ajoutée
             if (commandCount === 0) {
                 console.warn('[Commands] Aucune commande valide ajoutée');
-                return interaction.editReply({
+                await interaction.editReply({
                     content: 'Erreur : Aucune commande valide à lister.',
                     ephemeral: true
                 });
+                return;
             }
 
             // Ajouter footer au dernier embed
@@ -170,17 +195,18 @@ module.exports = {
             console.log('[Commands] Terminé : Liste envoyée');
         } catch (error) {
             console.error('[Commands] Erreur globale :', error.stack);
-            if (!interaction.deferred && !interaction.replied) {
-                await interaction.reply({
-                    content: 'Erreur lors de la récupération des commandes.',
-                    ephemeral: true
-                }).catch(err => console.error('[Commands] Erreur lors de reply :', err.stack));
-            } else {
+            try {
                 await interaction.editReply({
                     content: 'Erreur lors de la récupération des commandes.',
                     ephemeral: true
-                }).catch(err => console.error('[Commands] Erreur lors de editReply :', err.stack));
+                });
+            } catch (err) {
+                console.error('[Commands] Erreur lors de editReply :', err.stack);
             }
+        } finally {
+            // Retirer le verrou
+            activeCommands.delete(commandKey);
+            console.log(`[Commands] Verrou libéré pour ${commandKey}`);
         }
     }
 };
