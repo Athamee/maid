@@ -8,7 +8,7 @@ module.exports = {
     // Définir la commande
     data: new SlashCommandBuilder()
         .setName('commands')
-        .setDescription('Lister les 10 premières commandes du bot avec leurs permissions'), 
+        .setDescription('Lister les 10 premières commandes du bot avec leurs permissions'),
 
     // Exécuter la commande
     async execute(interaction) {
@@ -52,7 +52,7 @@ module.exports = {
             const embeds = [];
             let currentEmbed = new EmbedBuilder()
                 .setTitle('Liste des commandes du bot')
-                .setDescription('Voici les 10 premières commandes disponibles avec leurs permissions et restrictions.') 
+                .setDescription('Voici les 10 premières commandes disponibles avec leurs permissions et restrictions.')
                 .setColor('#00FFAA')
                 .setTimestamp();
             let commandCount = 0;
@@ -110,23 +110,37 @@ module.exports = {
                     permissions = 'Erreur lors du calcul';
                 }
 
-                // Vérifier restrictions (rôles et canaux)
+                // Vérifier restrictions (rôles, canaux, salons)
                 let restrictions = 'Aucune';
                 try {
+                    // Créer une liste pour combiner toutes les restrictions
+                    let restrictionList = [];
+
                     // Vérifier les restrictions de rôles
                     const roleOptions = Array.isArray(command.data.options)
                         ? command.data.options.filter(opt => opt && opt.type === 8) // 8 = Role
                         : [];
-                    let restrictionList = [];
                     if (roleOptions.length > 0) {
                         restrictionList.push('Requiert des rôles spécifiques');
                     }
-                    // AJOUTÉ : Vérifier les restrictions de canal (DM ou serveur)
+
+                    // Vérifier les restrictions DM/serveur
                     if (command.data.dm_permission === false) {
                         restrictionList.push('Serveur uniquement (pas en DM)');
+                    } else if (command.data.dm_permission === true) {
+                        restrictionList.push('DM uniquement'); // AJOUTÉ : Gestion explicite des commandes limitées aux DM
                     }
-                    // Combiner les restrictions
+
+                    // AJOUTÉ : Vérifier les restrictions de salons spécifiques
+                    if (command.data.restrictedChannels?.length > 0) {
+                        restrictionList.push('Salons spécifiques uniquement');
+                    }
+
+                    // Combiner les restrictions ou garder "Aucune"
                     restrictions = restrictionList.length > 0 ? restrictionList.join(', ') : 'Aucune';
+
+                    // AJOUTÉ : Loguer pour déboguer les restrictions
+                    console.log(`[Commands] Restrictions pour ${command.data.name} : ${restrictions}`);
                 } catch (err) {
                     console.warn(`[Commands] Erreur restrictions ${command.data.name} : ${err.message}`);
                     restrictions = 'Erreur lors du calcul';
