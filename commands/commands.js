@@ -12,7 +12,14 @@ module.exports = {
         console.log(`[Commands] Commande exécutée par ${interaction.user.tag} dans ${interaction.guild.name} (ID: ${interaction.guild.id})`);
 
         try {
-            // Différer la réponse pour collecter les commandes
+            // Vérifier concurrence
+            if (interaction.deferred || interaction.replied) {
+                console.log('[Commands] Interaction déjà traitée, ignorée');
+                return;
+            }
+
+            // Différer la réponse rapidement
+            console.log('[Commands] Différer la réponse');
             await interaction.deferReply();
 
             // Récupérer toutes les commandes
@@ -35,8 +42,7 @@ module.exports = {
                 .setColor('#00FFAA')
                 .setTimestamp();
             let commandCount = 0;
-            let fieldsInCurrentEmbed = 0;
-            const maxFieldsPerEmbed = 5; // Limite à 5 commandes par embed
+            let currentEmbedSize = 30 + 50; // Titre (~30) + description (~50)
 
             // Mapper les permissions Discord
             const permissionMap = {
@@ -78,27 +84,35 @@ module.exports = {
                     inline: false
                 };
 
-                // Vérifier limite de champs
-                if (fieldsInCurrentEmbed >= maxFieldsPerEmbed) {
-                    console.log(`[Commands] Limite de ${maxFieldsPerEmbed} champs atteinte, création d’un nouvel embed`);
+                // Estimer taille du champ
+                const fieldSize = (field.name.length || 0) + (field.value.length || 0);
+                if (field.name.length > 256 || field.value.length > 1024) {
+                    console.warn(`[Commands] Commande ${command.data.name} rejetée : champ trop long (nom: ${field.name.length}, valeur: ${field.value.length})`);
+                    continue;
+                }
+
+                // Vérifier taille embed
+                if (currentEmbedSize + fieldSize + 50 > 5500) { // Marge pour footer
+                    console.log(`[Commands] Limite de ~5500 caractères atteinte, création d’un nouvel embed`);
                     embeds.push(currentEmbed);
                     currentEmbed = new EmbedBuilder()
                         .setTitle('Liste des commandes du bot (suite)')
                         .setDescription('Suite des commandes disponibles.')
                         .setColor('#00FFAA')
                         .setTimestamp();
-                    fieldsInCurrentEmbed = 0;
+                    currentEmbedSize = 30 + 50; // Réinitialiser
                 }
 
                 // Ajouter le champ
+                console.log(`[Commands] Ajout de ${command.data.name} à l’embed (taille: ${fieldSize})`);
                 currentEmbed.addFields(field);
-                fieldsInCurrentEmbed++;
+                currentEmbedSize += fieldSize;
                 commandCount++;
             }
 
             // Ajouter le dernier embed
-            if (fieldsInCurrentEmbed > 0) {
-                console.log(`[Commands] Ajout du dernier embed avec ${fieldsInCurrentEmbed} champs`);
+            if (currentEmbed.data.fields?.length > 0) {
+                console.log(`[Commands] Ajout du dernier embed avec ${currentEmbed.data.fields.length} champs`);
                 embeds.push(currentEmbed);
             }
 
@@ -116,6 +130,19 @@ module.exports = {
                 embeds[embeds.length - 1].setFooter({
                     text: `Exécuté par ${interaction.user.tag} | ${commandCount} commandes listées`
                 });
+                currentEmbedSize += 50; // Estimation footer
+            }
+
+            // Vérifier limite embeds
+            if (embeds.length > 10) {
+                console.warn(`[Commands] Trop d’embeds (${embeds.length}), regroupement des derniers`);
+                const lastEmbed = new EmbedBuilder()
+                    .setTitle('Liste des commandes du bot (résumé)')
+                    .setDescription('Certaines commandes n’ont pas pu être listées (limite atteinte).')
+                    .setColor('#00FFAA')
+                    .setTimestamp()
+                    .setFooter({ text: `Exécuté par ${interaction.user.tag} | ${commandCount} commandes listées` });
+                embeds.splice(10, embeds.length - 10, lastEmbed);
             }
 
             // Envoyer les embeds
@@ -124,10 +151,17 @@ module.exports = {
             console.log('[Commands] Terminé : Liste envoyée');
         } catch (error) {
             console.error('[Commands] Erreur globale :', error.stack);
-            await interaction.editReply({
-                content: 'Erreur lors de la récupération des commandes.',
-                ephemeral: true
-            });
+            if (!interaction.deferred && !interaction.replied) {
+                await interaction.reply({
+                    content: 'Erreur lors de la récupération des commandes.',
+                    ephemeral: true
+                }).catch(err => console.error('[Commands] Erreur lors de reply :', err.stack));
+            } else {
+                await interaction.editReply({
+                    content: 'Erreur lors de la récupération des commandes.',
+                    ephemeral: true
+                }).catch(err => console.error('[Commands] Erreur lors de editReply :', err.stack));
+            }
         }
     }
 };
