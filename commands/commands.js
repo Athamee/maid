@@ -36,6 +36,7 @@ module.exports = {
                 .setTimestamp();
             let commandCount = 0;
             let fieldsInCurrentEmbed = 0;
+            const maxFieldsPerEmbed = 10; // Limite pour éviter dépassement 6000 caractères
 
             // Mapper les permissions Discord
             const permissionMap = {
@@ -70,16 +71,16 @@ module.exports = {
                     restrictions = 'Requiert des rôles spécifiques';
                 }
 
-                // Ajouter champ
+                // Créer champ
                 const field = {
                     name: `/${command.data.name}`,
                     value: `**Description** : ${command.data.description}\n**Permissions** : ${permissions}\n**Restrictions** : ${restrictions}`,
                     inline: false
                 };
 
-                // Vérifier limite de champs (25 par embed)
-                if (fieldsInCurrentEmbed >= 25) {
-                    console.log(`[Commands] Limite de 25 champs atteinte, création d’un nouvel embed`);
+                // Vérifier limite de champs
+                if (fieldsInCurrentEmbed >= maxFieldsPerEmbed) {
+                    console.log(`[Commands] Limite de ${maxFieldsPerEmbed} champs atteinte, création d’un nouvel embed`);
                     embeds.push(currentEmbed);
                     currentEmbed = new EmbedBuilder()
                         .setTitle('Liste des commandes du bot (suite)')
