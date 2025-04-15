@@ -3,28 +3,22 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('disc
 
 module.exports = {
     // Définir la commande
-    data: (() => {
-        const commandData = new SlashCommandBuilder()
-            .setName('ban')
-            .setDescription('Bannir un membre spécifique (admin uniquement)')
-            .addUserOption(option =>
-                option.setName('target')
-                    .setDescription('Membre à bannir')
-                    .setRequired(true))
-            .addStringOption(option =>
-                option.setName('reason')
-                    .setDescription('Raison du ban (envoyée en DM et affichée)')
-                    .setRequired(true))
-            .addStringOption(option =>
-                option.setName('fichier_url')
-                    .setDescription('URL d’une image ou GIF à afficher (facultatif)')
-                    .setRequired(false))
-            .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-            .toJSON();
-        // AJOUTÉ : Définir les rôles requis (Administrateur et Modo)
-        commandData.requiredRoles = [String(PermissionFlagsBits.Administrator), process.env.MODO];
-        return commandData;
-    })(),
+    data: new SlashCommandBuilder()
+        .setName('ban')
+        .setDescription('Bannir un membre spécifique (admin uniquement)')
+        .addUserOption(option =>
+            option.setName('target')
+                .setDescription('Membre à bannir')
+                .setRequired(true))
+        .addStringOption(option =>
+            option.setName('reason')
+                .setDescription('Raison du ban (envoyée en DM et affichée)')
+                .setRequired(true))
+        .addStringOption(option =>
+            option.setName('fichier_url')
+                .setDescription('URL d’une image ou GIF à afficher (facultatif)')
+                .setRequired(false))
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     // Exécuter la commande
     async execute(interaction) {

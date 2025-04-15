@@ -40,30 +40,24 @@ async function generateWelcomeImage(member, roleName) {
 }
 
 module.exports = {
-    data: (() => {
-        const commandData = new SlashCommandBuilder()
-            .setName('admit')
-            .setDescription('Donner un rôle à un membre et envoyer un message de bienvenue')
-            .addUserOption(option =>
-                option.setName('membre')
-                    .setDescription('Le membre à qui attribuer un rôle')
-                    .setRequired(true))
-            .addStringOption(option =>
-                option.setName('role')
-                    .setDescription('Le rôle à attribuer')
-                    .setRequired(true)
-                    .addChoices(
-                        { name: 'Tampon', value: 'roleadd' },
-                        { name: 'Certifié', value: 'roleadd2' },
-                        { name: 'DM', value: 'roleadd3' },
-                        { name: 'Galerie', value: 'roleadd4' },
-                        { name: 'Torture', value: 'roleadd5' }
-                    ))
-            .toJSON();
-        // AJOUTÉ : Définir les rôles requis (Administrateur et Modo)
-        commandData.requiredRoles = [String(PermissionFlagsBits.Administrator), process.env.MODO];
-        return commandData;
-    })(),
+    data: new SlashCommandBuilder()
+        .setName('admit')
+        .setDescription('Donner un rôle à un membre et envoyer un message de bienvenue')
+        .addUserOption(option =>
+            option.setName('membre')
+                .setDescription('Le membre à qui attribuer un rôle')
+                .setRequired(true))
+        .addStringOption(option =>
+            option.setName('role')
+                .setDescription('Le rôle à attribuer')
+                .setRequired(true)
+                .addChoices(
+                    { name: 'Tampon', value: 'roleadd' },
+                    { name: 'Certifié', value: 'roleadd2' },
+                    { name: 'DM', value: 'roleadd3' },
+                    { name: 'Galerie', value: 'roleadd4' },
+                    { name: 'Torture', value: 'roleadd5' }
+                )),
 
     async execute(interaction) {
         console.log(`[Commande /admit] Exécutée par ${interaction.user.tag} (ID: ${interaction.user.id})`);
