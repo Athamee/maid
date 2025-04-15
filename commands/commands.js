@@ -96,6 +96,10 @@ module.exports = {
                         ? String(command.data.default_member_permissions)
                         : '0';
                     permissions = permissionMap[permValue] || `Permissions spécifiques (${permValue})`;
+                    if (typeof permissions !== 'string') {
+                        console.warn(`[Commands] Permissions non-string pour ${command.data.name}: ${permissions}`);
+                        permissions = 'Erreur (non-string)';
+                    }
                 } catch (err) {
                     console.warn(`[Commands] Erreur permissions ${command.data.name} : ${err.message}`);
                     permissions = 'Erreur lors du calcul';
@@ -104,7 +108,9 @@ module.exports = {
                 // Vérifier restrictions (ex. rôles)
                 let restrictions = 'Aucune';
                 try {
-                    const roleOptions = command.data.options?.filter(opt => opt.type === 8) || []; // 8 = Role
+                    const roleOptions = Array.isArray(command.data.options)
+                        ? command.data.options.filter(opt => opt && opt.type === 8) // 8 = Role
+                        : [];
                     if (roleOptions.length > 0) {
                         restrictions = 'Requiert des rôles spécifiques';
                     }
@@ -129,6 +135,9 @@ module.exports = {
                     console.warn(`[Commands] Commande ${command.data.name} rejetée : champ trop long (nom: ${field.name.length}, valeur: ${field.value.length})`);
                     continue;
                 }
+
+                // Loguer la valeur du champ
+                console.log(`[Commands] Valeur champ pour ${command.data.name} : ${field.value}`);
 
                 // Estimer taille du champ
                 const fieldSize = field.name.length + field.value.length;
