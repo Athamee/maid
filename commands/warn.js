@@ -8,6 +8,7 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('warn')
         .setDescription('Avertir un membre (modo only)') // Description statique garantie
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator) // Permissions explicites pour éviter warning
         .addUserOption(option => option.setName('target').setDescription('Membre à avertir').setRequired(true))
         .addStringOption(option => option.setName('reason').setDescription('Raison').setRequired(false)),
 
