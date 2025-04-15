@@ -8,7 +8,7 @@ module.exports = {
     // Définir la commande
     data: new SlashCommandBuilder()
         .setName('commands')
-        .setDescription('Lister la commande du bot commençant par "a" avec ses permissions'),
+        .setDescription('Lister les 10 premières commandes du bot avec leurs permissions'), // MODIFIÉ : Description mise à jour pour refléter la limite à 10 commandes
 
     // Exécuter la commande
     async execute(interaction) {
@@ -48,11 +48,11 @@ module.exports = {
             }
 
             // Créer un tableau d’embeds
-            console.log(`[Commands] Préparation des embeds pour filtrage (commençant par "a")`);
+            console.log(`[Commands] Préparation des embeds pour les 10 premières commandes`); // MODIFIÉ : Log mis à jour
             const embeds = [];
             let currentEmbed = new EmbedBuilder()
                 .setTitle('Liste des commandes du bot')
-                .setDescription('Voici la commande disponible commençant par "a" avec ses permissions et restrictions.')
+                .setDescription('Voici les 10 premières commandes disponibles avec leurs permissions et restrictions.') // MODIFIÉ : Description mise à jour
                 .setColor('#00FFAA')
                 .setTimestamp();
             let commandCount = 0;
@@ -69,6 +69,9 @@ module.exports = {
                 '0': 'Aucune (accessible à tous)'
             };
 
+            // Initialiser un compteur pour limiter à 10 commandes
+            let commandsProcessed = 0; // AJOUTÉ : Compteur pour suivre le nombre de commandes traitées
+
             // Parcourir les commandes
             for (const command of commands.values()) {
                 // Loguer chaque commande
@@ -84,10 +87,11 @@ module.exports = {
                     continue;
                 }
 
-                // Filtrer pour la commande commençant par "a"
-                if (!command.data.name.startsWith('a')) {
-                    console.log(`[Commands] Commande ${command.data.name} exclue (ne commence pas par "a")`);
-                    continue;
+                // Vérifier la limite de 10 commandes
+                commandsProcessed++; // AJOUTÉ : Incrémenter le compteur après validation
+                if (commandsProcessed > 10) { // AJOUTÉ : Arrêter après 10 commandes valides
+                    console.log('[Commands] Limite de 10 commandes atteinte, arrêt du traitement');
+                    break;
                 }
 
                 // Mapper permissions avec sécurité
@@ -156,7 +160,7 @@ module.exports = {
                     embeds.push(currentEmbed);
                     currentEmbed = new EmbedBuilder()
                         .setTitle('Liste des commandes du bot (suite)')
-                        .setDescription('Suite de la commande disponible.')
+                        .setDescription('Suite des 10 premières commandes disponibles.') // MODIFIÉ : Description mise à jour
                         .setColor('#00FFAA')
                         .setTimestamp();
                     currentEmbedSize = 30 + 50; // Réinitialiser
@@ -177,9 +181,9 @@ module.exports = {
 
             // Vérifier si aucune commande ajoutée
             if (commandCount === 0) {
-                console.warn('[Commands] Aucune commande valide ajoutée (aucune commence par "a")');
+                console.warn('[Commands] Aucune commande valide ajoutée');
                 await interaction.editReply({
-                    content: 'Erreur : Aucune commande commençant par "a" trouvée.',
+                    content: 'Erreur : Aucune commande trouvée.', // MODIFIÉ : Message d'erreur mis à jour
                     ephemeral: true
                 });
                 return;
@@ -188,7 +192,7 @@ module.exports = {
             // Ajouter footer au dernier embed
             if (embeds.length > 0) {
                 embeds[embeds.length - 1].setFooter({
-                    text: `Exécuté par ${interaction.user.tag} | ${commandCount} commande listée`
+                    text: `Exécuté par ${interaction.user.tag} | ${commandCount} commande(s) listée(s)` // MODIFIÉ : Pluriel ajusté dynamiquement
                 });
                 currentEmbedSize += 50; // Estimation footer
             }
@@ -198,22 +202,22 @@ module.exports = {
                 console.warn(`[Commands] Trop d’embeds (${embeds.length}), regroupement des derniers`);
                 const lastEmbed = new EmbedBuilder()
                     .setTitle('Liste des commandes du bot (résumé)')
-                    .setDescription('Limite atteinte pour la commande commençant par "a".')
+                    .setDescription('Limite atteinte pour les commandes.') // MODIFIÉ : Description générique
                     .setColor('#00FFAA')
                     .setTimestamp()
-                    .setFooter({ text: `Exécuté par ${interaction.user.tag} | ${commandCount} commande listée` });
+                    .setFooter({ text: `Exécuté par ${interaction.user.tag} | ${commandCount} commande(s) listée(s)` }); // MODIFIÉ : Pluriel ajusté
                 embeds.splice(10, embeds.length - 10, lastEmbed);
             }
 
             // Envoyer les embeds
-            console.log(`[Commands] Envoi de ${embeds.length} embed(s) avec ${commandCount} commande`);
+            console.log(`[Commands] Envoi de ${embeds.length} embed(s) avec ${commandCount} commande(s)`);
             await interaction.editReply({ embeds });
             console.log('[Commands] Terminé : Liste envoyée');
         } catch (error) {
             console.error('[Commands] Erreur globale :', error.stack);
             try {
                 await interaction.editReply({
-                    content: 'Erreur lors de la récupération de la commande.',
+                    content: 'Erreur lors de la récupération des commandes.', // MODIFIÉ : Pluriel ajusté
                     ephemeral: true
                 });
             } catch (err) {
