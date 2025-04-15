@@ -8,7 +8,7 @@ module.exports = {
     // Définir la commande
     data: new SlashCommandBuilder()
         .setName('commands')
-        .setDescription('Lister les 10 premières commandes du bot avec leurs permissions'), // MODIFIÉ : Description mise à jour pour refléter la limite à 10 commandes
+        .setDescription('Lister les 10 premières commandes du bot avec leurs permissions'), 
 
     // Exécuter la commande
     async execute(interaction) {
@@ -48,11 +48,11 @@ module.exports = {
             }
 
             // Créer un tableau d’embeds
-            console.log(`[Commands] Préparation des embeds pour les 10 premières commandes`); // MODIFIÉ : Log mis à jour
+            console.log(`[Commands] Préparation des embeds pour les 10 premières commandes`);
             const embeds = [];
             let currentEmbed = new EmbedBuilder()
                 .setTitle('Liste des commandes du bot')
-                .setDescription('Voici les 10 premières commandes disponibles avec leurs permissions et restrictions.') // MODIFIÉ : Description mise à jour
+                .setDescription('Voici les 10 premières commandes disponibles avec leurs permissions et restrictions.') 
                 .setColor('#00FFAA')
                 .setTimestamp();
             let commandCount = 0;
@@ -70,7 +70,7 @@ module.exports = {
             };
 
             // Initialiser un compteur pour limiter à 10 commandes
-            let commandsProcessed = 0; // AJOUTÉ : Compteur pour suivre le nombre de commandes traitées
+            let commandsProcessed = 0;
 
             // Parcourir les commandes
             for (const command of commands.values()) {
@@ -88,8 +88,8 @@ module.exports = {
                 }
 
                 // Vérifier la limite de 10 commandes
-                commandsProcessed++; // AJOUTÉ : Incrémenter le compteur après validation
-                if (commandsProcessed > 10) { // AJOUTÉ : Arrêter après 10 commandes valides
+                commandsProcessed++;
+                if (commandsProcessed > 10) {
                     console.log('[Commands] Limite de 10 commandes atteinte, arrêt du traitement');
                     break;
                 }
@@ -110,15 +110,23 @@ module.exports = {
                     permissions = 'Erreur lors du calcul';
                 }
 
-                // Vérifier restrictions (ex. rôles)
+                // Vérifier restrictions (rôles et canaux)
                 let restrictions = 'Aucune';
                 try {
+                    // Vérifier les restrictions de rôles
                     const roleOptions = Array.isArray(command.data.options)
                         ? command.data.options.filter(opt => opt && opt.type === 8) // 8 = Role
                         : [];
+                    let restrictionList = [];
                     if (roleOptions.length > 0) {
-                        restrictions = 'Requiert des rôles spécifiques';
+                        restrictionList.push('Requiert des rôles spécifiques');
                     }
+                    // AJOUTÉ : Vérifier les restrictions de canal (DM ou serveur)
+                    if (command.data.dm_permission === false) {
+                        restrictionList.push('Serveur uniquement (pas en DM)');
+                    }
+                    // Combiner les restrictions
+                    restrictions = restrictionList.length > 0 ? restrictionList.join(', ') : 'Aucune';
                 } catch (err) {
                     console.warn(`[Commands] Erreur restrictions ${command.data.name} : ${err.message}`);
                     restrictions = 'Erreur lors du calcul';
@@ -160,7 +168,7 @@ module.exports = {
                     embeds.push(currentEmbed);
                     currentEmbed = new EmbedBuilder()
                         .setTitle('Liste des commandes du bot (suite)')
-                        .setDescription('Suite des 10 premières commandes disponibles.') // MODIFIÉ : Description mise à jour
+                        .setDescription('Suite des 10 premières commandes disponibles.')
                         .setColor('#00FFAA')
                         .setTimestamp();
                     currentEmbedSize = 30 + 50; // Réinitialiser
@@ -183,7 +191,7 @@ module.exports = {
             if (commandCount === 0) {
                 console.warn('[Commands] Aucune commande valide ajoutée');
                 await interaction.editReply({
-                    content: 'Erreur : Aucune commande trouvée.', // MODIFIÉ : Message d'erreur mis à jour
+                    content: 'Erreur : Aucune commande trouvée.',
                     ephemeral: true
                 });
                 return;
@@ -192,7 +200,7 @@ module.exports = {
             // Ajouter footer au dernier embed
             if (embeds.length > 0) {
                 embeds[embeds.length - 1].setFooter({
-                    text: `Exécuté par ${interaction.user.tag} | ${commandCount} commande(s) listée(s)` // MODIFIÉ : Pluriel ajusté dynamiquement
+                    text: `Exécuté par ${interaction.user.tag} | ${commandCount} commande(s) listée(s)`
                 });
                 currentEmbedSize += 50; // Estimation footer
             }
@@ -202,10 +210,10 @@ module.exports = {
                 console.warn(`[Commands] Trop d’embeds (${embeds.length}), regroupement des derniers`);
                 const lastEmbed = new EmbedBuilder()
                     .setTitle('Liste des commandes du bot (résumé)')
-                    .setDescription('Limite atteinte pour les commandes.') // MODIFIÉ : Description générique
+                    .setDescription('Limite atteinte pour les commandes.')
                     .setColor('#00FFAA')
                     .setTimestamp()
-                    .setFooter({ text: `Exécuté par ${interaction.user.tag} | ${commandCount} commande(s) listée(s)` }); // MODIFIÉ : Pluriel ajusté
+                    .setFooter({ text: `Exécuté par ${interaction.user.tag} | ${commandCount} commande(s) listée(s)` });
                 embeds.splice(10, embeds.length - 10, lastEmbed);
             }
 
@@ -217,7 +225,7 @@ module.exports = {
             console.error('[Commands] Erreur globale :', error.stack);
             try {
                 await interaction.editReply({
-                    content: 'Erreur lors de la récupération des commandes.', // MODIFIÉ : Pluriel ajusté
+                    content: 'Erreur lors de la récupération des commandes.',
                     ephemeral: true
                 });
             } catch (err) {
