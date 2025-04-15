@@ -36,7 +36,7 @@ module.exports = {
                 .setTimestamp();
             let commandCount = 0;
             let fieldsInCurrentEmbed = 0;
-            const maxFieldsPerEmbed = 10; // Limite pour éviter dépassement 6000 caractères
+            const maxFieldsPerEmbed = 5; // Limite à 5 commandes par embed
 
             // Mapper les permissions Discord
             const permissionMap = {
