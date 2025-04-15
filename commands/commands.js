@@ -8,7 +8,7 @@ module.exports = {
     // Définir la commande
     data: new SlashCommandBuilder()
         .setName('commands')
-        .setDescription('Lister toutes les commandes du bot (sauf role-*) avec leurs permissions'),
+        .setDescription('Lister la commande du bot commençant par "a" avec ses permissions'),
 
     // Exécuter la commande
     async execute(interaction) {
@@ -19,6 +19,7 @@ module.exports = {
         // Vérifier concurrence tôt
         if (activeCommands.has(commandKey)) {
             console.log(`[Commands] Ignoré : ${commandKey} déjà en cours`);
+            await interaction.reply({ content: 'Commande en cours, veuillez attendre.', ephemeral: true });
             return;
         }
         if (interaction.deferred || interaction.replied) {
@@ -47,11 +48,11 @@ module.exports = {
             }
 
             // Créer un tableau d’embeds
-            console.log(`[Commands] Préparation des embeds pour ${commands.size} commandes`);
+            console.log(`[Commands] Préparation des embeds pour filtrage (commençant par "a")`);
             const embeds = [];
             let currentEmbed = new EmbedBuilder()
                 .setTitle('Liste des commandes du bot')
-                .setDescription('Voici toutes les commandes disponibles (sauf role-*) avec leurs permissions et restrictions.')
+                .setDescription('Voici la commande disponible commençant par "a" avec ses permissions et restrictions.')
                 .setColor('#00FFAA')
                 .setTimestamp();
             let commandCount = 0;
@@ -83,9 +84,9 @@ module.exports = {
                     continue;
                 }
 
-                // Exclure les commandes role-*
-                if (command.data.name.startsWith('role-')) {
-                    console.log(`[Commands] Commande ${command.data.name} exclue (role-*)`);
+                // Filtrer pour la commande commençant par "a"
+                if (!command.data.name.startsWith('a')) {
+                    console.log(`[Commands] Commande ${command.data.name} exclue (ne commence pas par "a")`);
                     continue;
                 }
 
@@ -120,9 +121,15 @@ module.exports = {
                 }
 
                 // Créer champ avec validation stricte
+                const fieldValue = `**Description** : ${command.data.description}\n**Permissions** : ${permissions}\n**Restrictions** : ${restrictions}`;
+                if (typeof fieldValue !== 'string') {
+                    console.warn(`[Commands] Valeur champ invalide pour ${command.data.name}: ${fieldValue}`);
+                    continue;
+                }
+
                 const field = {
                     name: `/${command.data.name}`,
-                    value: `**Description** : ${command.data.description}\n**Permissions** : ${permissions}\n**Restrictions** : ${restrictions}`,
+                    value: fieldValue,
                     inline: false
                 };
 
@@ -149,7 +156,7 @@ module.exports = {
                     embeds.push(currentEmbed);
                     currentEmbed = new EmbedBuilder()
                         .setTitle('Liste des commandes du bot (suite)')
-                        .setDescription('Suite des commandes disponibles.')
+                        .setDescription('Suite de la commande disponible.')
                         .setColor('#00FFAA')
                         .setTimestamp();
                     currentEmbedSize = 30 + 50; // Réinitialiser
@@ -170,9 +177,9 @@ module.exports = {
 
             // Vérifier si aucune commande ajoutée
             if (commandCount === 0) {
-                console.warn('[Commands] Aucune commande valide ajoutée');
+                console.warn('[Commands] Aucune commande valide ajoutée (aucune commence par "a")');
                 await interaction.editReply({
-                    content: 'Erreur : Aucune commande valide à lister.',
+                    content: 'Erreur : Aucune commande commençant par "a" trouvée.',
                     ephemeral: true
                 });
                 return;
@@ -181,7 +188,7 @@ module.exports = {
             // Ajouter footer au dernier embed
             if (embeds.length > 0) {
                 embeds[embeds.length - 1].setFooter({
-                    text: `Exécuté par ${interaction.user.tag} | ${commandCount} commandes listées`
+                    text: `Exécuté par ${interaction.user.tag} | ${commandCount} commande listée`
                 });
                 currentEmbedSize += 50; // Estimation footer
             }
@@ -191,22 +198,22 @@ module.exports = {
                 console.warn(`[Commands] Trop d’embeds (${embeds.length}), regroupement des derniers`);
                 const lastEmbed = new EmbedBuilder()
                     .setTitle('Liste des commandes du bot (résumé)')
-                    .setDescription('Certaines commandes n’ont pas pu être listées (limite atteinte).')
+                    .setDescription('Limite atteinte pour la commande commençant par "a".')
                     .setColor('#00FFAA')
                     .setTimestamp()
-                    .setFooter({ text: `Exécuté par ${interaction.user.tag} | ${commandCount} commandes listées` });
+                    .setFooter({ text: `Exécuté par ${interaction.user.tag} | ${commandCount} commande listée` });
                 embeds.splice(10, embeds.length - 10, lastEmbed);
             }
 
             // Envoyer les embeds
-            console.log(`[Commands] Envoi de ${embeds.length} embed(s) avec ${commandCount} commandes`);
+            console.log(`[Commands] Envoi de ${embeds.length} embed(s) avec ${commandCount} commande`);
             await interaction.editReply({ embeds });
             console.log('[Commands] Terminé : Liste envoyée');
         } catch (error) {
             console.error('[Commands] Erreur globale :', error.stack);
             try {
                 await interaction.editReply({
-                    content: 'Erreur lors de la récupération des commandes.',
+                    content: 'Erreur lors de la récupération de la commande.',
                     ephemeral: true
                 });
             } catch (err) {
