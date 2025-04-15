@@ -5,7 +5,7 @@ module.exports = {
     // Définir la commande
     data: new SlashCommandBuilder()
         .setName('commands')
-        .setDescription('Lister toutes les commandes du bot avec leurs permissions'),
+        .setDescription('Lister toutes les commandes du bot (sauf role-*) avec leurs permissions'),
 
     // Exécuter la commande
     async execute(interaction) {
@@ -20,7 +20,10 @@ module.exports = {
 
             // Différer la réponse rapidement
             console.log('[Commands] Différer la réponse');
-            await interaction.deferReply();
+            await interaction.deferReply().catch(err => {
+                console.error('[Commands] Erreur dans deferReply :', err.stack);
+                throw err;
+            });
 
             // Récupérer toutes les commandes
             console.log('[Commands] Récupération des commandes depuis client.commands');
@@ -38,11 +41,11 @@ module.exports = {
             const embeds = [];
             let currentEmbed = new EmbedBuilder()
                 .setTitle('Liste des commandes du bot')
-                .setDescription('Voici toutes les commandes disponibles avec leurs permissions et restrictions.')
+                .setDescription('Voici toutes les commandes disponibles (sauf role-*) avec leurs permissions et restrictions.')
                 .setColor('#00FFAA')
                 .setTimestamp();
             let commandCount = 0;
-            let currentEmbedSize = 30 + 50; // Titre (~30) + description (~50)
+            let currentEmbedSize = 30 + 60; //Estimation du titre (~30) + description (~60)
 
             // Mapper les permissions Discord
             const permissionMap = {
@@ -58,6 +61,12 @@ module.exports = {
             // Parcourir les commandes
             for (const command of commands.values()) {
                 console.log(`[Commands] Traitement de la commande ${command.data.name}`);
+
+                // Exclure les commandes role-*
+                if (command.data.name.startsWith('role-')) {
+                    console.log(`[Commands] Commande ${command.data.name} exclue (role-*)`);
+                    continue;
+                }
 
                 // Vérifier données commande
                 if (!command.data.name || !command.data.description) {
@@ -77,19 +86,29 @@ module.exports = {
                     restrictions = 'Requiert des rôles spécifiques';
                 }
 
-                // Créer champ
+                // Créer champ avec validation
                 const field = {
-                    name: `/${command.data.name}`,
-                    value: `**Description** : ${command.data.description}\n**Permissions** : ${permissions}\n**Restrictions** : ${restrictions}`,
+                    name: String(command.data.name ? `/${command.data.name}` : 'Inconnu'),
+                    value: String(
+                        command.data.description && permissions && restrictions
+                            ? `**Description** : ${command.data.description}\n**Permissions** : ${permissions}\n**Restrictions** : ${restrictions}`
+                            : 'Données manquantes'
+                    ),
                     inline: false
                 };
 
-                // Estimer taille du champ
-                const fieldSize = (field.name.length || 0) + (field.value.length || 0);
+                // Vérifier type et taille du champ
+                if (typeof field.name !== 'string' || typeof field.value !== 'string') {
+                    console.warn(`[Commands] Commande ${command.data.name} rejetée : type champ invalide`);
+                    continue;
+                }
                 if (field.name.length > 256 || field.value.length > 1024) {
                     console.warn(`[Commands] Commande ${command.data.name} rejetée : champ trop long (nom: ${field.name.length}, valeur: ${field.value.length})`);
                     continue;
                 }
+
+                // Estimer taille du champ
+                const fieldSize = field.name.length + field.value.length;
 
                 // Vérifier taille embed
                 if (currentEmbedSize + fieldSize + 50 > 5500) { // Marge pour footer
