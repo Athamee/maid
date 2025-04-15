@@ -1,14 +1,17 @@
+// Importer les modules nécessaires
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { PermissionFlagsBits } = require('discord.js');
 const pool = require('../db');
 
 module.exports = {
+    // Définir la commande
     data: new SlashCommandBuilder()
         .setName('warn')
-        .setDescription('Avertir un membre (modo only)')
+        .setDescription('Avertir un membre (modo only)') // Description statique garantie
         .addUserOption(option => option.setName('target').setDescription('Membre à avertir').setRequired(true))
         .addStringOption(option => option.setName('reason').setDescription('Raison').setRequired(false)),
 
+    // Exécuter la commande
     async execute(interaction) {
         const modoRoleId = process.env.MODO;
         const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
