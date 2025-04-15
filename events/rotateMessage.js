@@ -56,11 +56,6 @@ module.exports = {
 
                 // Préparer le contenu du nouveau message
                 const newMessageContent = {
-                    // Ajout du ping du rôle MEMBRE_ROLE_ID s’il est défini
-                    content: process.env.MEMBRE_ROLE_ID ? 
-                        `<@&${process.env.MEMBRE_ROLE_ID}> ${oldestMessage.content || ''}` : 
-                        oldestMessage.content || null,
-                    embeds: oldestMessage.embeds.length > 0 ? oldestMessage.embeds : [],
                     // Inclure les pièces jointes si présentes
                     files: oldestMessage.attachments.size > 0 ? 
                         oldestMessage.attachments.map(attachment => attachment.url) : []
