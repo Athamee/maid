@@ -40,6 +40,9 @@ module.exports = {
                     'accept_reglement': { commandName: 'reglement', handler: 'handleButtonInteraction' },
                     'ticket_type_6': { commandName: 'ticket', handler: 'handleButtonInteraction' },
                     'close_ticket': { commandName: 'ticket', handler: 'handleCloseTicket' },
+                    // Boutons pour /clear (ajouté pour gérer confirm/cancel)
+                    'confirm': { commandName: 'clear', handler: 'handleButtonInteraction' },
+                    'cancel': { commandName: 'clear', handler: 'handleButtonInteraction' },
                     // Ajout des préfixes pour les boutons de rôles (14/04/2025) pour gérer les interactions des commandes de rôles
                     'age_': { commandName: 'role-age', handler: 'handleButtonInteraction' },
                     'connaissance-bdsm_': { commandName: 'role-connaissance-bdsm', handler: 'handleButtonInteraction' },
@@ -56,7 +59,7 @@ module.exports = {
                 };
 
                 // Vérifier si le customId commence par un préfixe connu (pour gérer les customId dynamiques comme bdsm_<roleId>_<index>)
-                const buttonInfo = Object.entries(buttonHandlers).find(([key]) => interaction.customId.startsWith(key))?.[1];
+                const buttonInfo = Object.entries(buttonHandlers).find(([key]) => interaction.customId === key || interaction.customId.startsWith(key))?.[1];
                 if (buttonInfo) {
                     const command = interaction.client.commands.get(buttonInfo.commandName);
                     if (command && command[buttonInfo.handler]) {
