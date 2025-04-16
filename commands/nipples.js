@@ -16,7 +16,7 @@ module.exports = {
     // Fonction exécutée quand la commande est utilisée
     async execute(interaction) {
         // ID du salon où la commande est autorisée
-        const allowedChannelId = '1353348735660195911';
+        const allowedChannelId = '1358519578631868658';
 
         // Vérifie si la commande est utilisée dans le bon salon
         if (interaction.channel.id !== allowedChannelId) {
@@ -48,7 +48,7 @@ module.exports = {
 
         // Définit le texte avec les mentions
         const messageContent = sender.id === target.id
-            ? `<@${sender.id}> boit un café !`:
+            ? `<@${sender.id}> Mate des seins !`:
 
         // Log pour vérifier ce qui est envoyé
         console.log('Message envoyé :', messageContent);
