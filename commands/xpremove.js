@@ -16,7 +16,7 @@ module.exports = {
         .addIntegerOption(option => 
             option.setName('xp')
                 .setDescription('Quantité d’XP à retirer')
-                .setRequired(true) // Changé à true car c’est la seule option
+                .setRequired(true) // Changé à true car c’est la seule option p
                 .setMinValue(1)), // Minimum 1 pour éviter 0
 
     async execute(interaction) {
