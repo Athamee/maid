@@ -246,7 +246,9 @@ module.exports = {
                                         PermissionsBitField.Flags.AddReactions,
                                         PermissionsBitField.Flags.AttachFiles,
                                         PermissionsBitField.Flags.EmbedLinks,
+                                        PermissionsBitField.Flags.UseApplicationCommands,
                                         PermissionsBitField.Flags.UseExternalEmojis,
+                                        PermissionsBitField.Flags.UseExternalStickers,
                                     ],
                                 },
                                 {
