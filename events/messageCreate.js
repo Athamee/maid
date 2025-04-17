@@ -1,4 +1,3 @@
-// messageCreate.js
 // Gérer les messages pour l’anti-spam et l’attribution d’XP
 const { Client } = require('discord.js');
 const pool = require('../db');
@@ -10,7 +9,7 @@ const reactionTriggers = {
     'nuit': '🌠',
     'salut': '😊',
     'hello': '🙃',
-    'merci': '🙏',
+    'merSupport': '🙏',
     'bravo': '👏',
     'lol': '😂',
     'cool': '😎'
@@ -56,7 +55,7 @@ module.exports = {
 
         // Ajout des réactions automatiques
         for (const [trigger, emoji] of Object.entries(reactionTriggers)) {
-            if (content.includes(trigger)) {
+            if (message.content.includes(trigger)) {
                 try { await message.react(emoji); } catch (error) { console.error(`Erreur réaction ${emoji} :`, error.stack); }
             }
         }
