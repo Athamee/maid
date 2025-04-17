@@ -7,7 +7,7 @@ const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
 const axios = require('axios');
 
 module.exports = {
-    // Définit la commande Slash /hug
+    // Définit la commande Slash /spank
     data: new SlashCommandBuilder()
         .setName('spank')
         .setDescription('Claque un Fiak, ou le tien !')
@@ -59,7 +59,7 @@ module.exports = {
         // Log pour vérifier ce qui est envoyé
         console.log('Message envoyé :', messageContent);
 
-        // Récupère un GIF de PCloud
+        // Récupère une image de PCloud
         try {
             // Requête pour lister les fichiers dans le dossier PCloud
             console.log('Requête listfolder...');
@@ -72,39 +72,40 @@ module.exports = {
             });
             console.log('listfolder réussi, contenus :', listResponse.data.metadata.contents.length);
 
-            // Filtre pour ne garder que les GIFs
-            const gifs = listResponse.data.metadata.contents.filter(file => file.contenttype === 'image/gif');
-            console.log('GIFs trouvés :', gifs.length);
+            // Filtre pour inclure PNG, JPEG, GIF, WebP (statique et animé)
+            const supportedFormats = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+            const images = listResponse.data.metadata.contents.filter(file => supportedFormats.includes(file.contenttype));
+            console.log('Images trouvées :', images.length);
 
-            if (gifs.length === 0) {
-                console.log('Aucun GIF trouvé');
-                return interaction.reply('Aucun GIF trouvé dans le dossier /spank !');
+            if (images.length === 0) {
+                console.log('Aucune image trouvée');
+                return interaction.reply('Aucune image trouvée dans le dossier /spank !');
             }
 
-            // Choisit un GIF aléatoire
-            const randomGif = gifs[Math.floor(Math.random() * gifs.length)];
-            console.log('GIF choisi :', randomGif.name, 'FileID :', randomGif.fileid);
+            // Choisit une image aléatoire
+            const randomImage = images[Math.floor(Math.random() * images.length)];
+            console.log('Image choisie :', randomImage.name, 'FileID :', randomImage.fileid);
 
-            // Requête pour obtenir un lien temporaire vers le GIF
+            // Requête pour obtenir un lien temporaire vers l'image
             console.log('Requête getfilelink...');
             const linkResponse = await axios.get('https://eapi.pcloud.com/getfilelink', {
                 params: {
                     username: email,
                     password: password,
-                    fileid: randomGif.fileid
+                    fileid: randomImage.fileid
                 }
             });
             console.log('Réponse getfilelink :', linkResponse.data);
-            const gifUrl = `https://${linkResponse.data.hosts[0]}${linkResponse.data.path}`;
-            console.log('Lien GIF généré :', gifUrl);
+            const imageUrl = `https://${linkResponse.data.hosts[0]}${linkResponse.data.path}`;
+            console.log('Lien image généré :', imageUrl);
 
             // Crée l’embed sans les mentions
             const embed = new EmbedBuilder()
                 .setColor('#FF69B4');
 
-            // Crée un attachment pour le GIF
-            const attachment = new AttachmentBuilder(gifUrl, { name: 'spank.gif' });
-            embed.setImage('attachment://spank.gif');
+            // Crée un attachment avec le nom de fichier original
+            const attachment = new AttachmentBuilder(imageUrl, { name: randomImage.name });
+            embed.setImage(`attachment://${randomImage.name}`);
 
             // Envoie tout en une seule fois avec reply
             await interaction.reply({
@@ -114,8 +115,8 @@ module.exports = {
             });
             console.log('/spank super well done !');
         } catch (error) {
-            console.error('Erreur dans /tea :', error.response ? error.response.data : error.message);
-            await interaction.reply('Erreur lors de la récupération du GIF !');
+            console.error('Erreur dans /spank :', error.response ? error.response.data : error.message);
+            await interaction.reply('Erreur lors de la récupération de l’image !');
         }
     },
 };
