@@ -62,7 +62,7 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator) // Requiert les permissions d'administrateur
         .setDMPermission(false), // Désactive l'utilisation en messages privés
 
-    // Métadonnées lisibles par commands.js
+    // Métadonnées lisibles parinto par commands.js
     permissions: {
         roles: [process.env.MODO], // Rôle MODO autorisé
         bitPermissions: [PermissionFlagsBits.Administrator] // Permissions Discord requises
@@ -70,6 +70,8 @@ module.exports = {
     restrictions: {
         allowedChannels: [], // Aucun salon spécifique requis
         restrictedChannels: [], // Aucun salon interdit
+        allowedCategories: [process.env.TICKET_CATEGORY_ID], // ID de la catégorie autorisée (ex. catégorie admin)
+        restrictedCategories: [], // Aucune catégorie interdite
         allowDM: false // Reflète setDMPermission(false)
     },
 
@@ -83,6 +85,18 @@ module.exports = {
             console.log(`[Permission refusée] ${interaction.user.tag} n’a pas les droits nécessaires`);
             return interaction.reply({
                 content: 'Permission refusée : réservée aux administrateurs ou modérateurs.',
+                ephemeral: true
+            });
+        }
+
+        // Vérification de la catégorie
+        const channel = interaction.channel;
+        const categoryId = channel.parentId;
+        const allowedCategories = module.exports.restrictions.allowedCategories;
+        if (allowedCategories.length > 0 && !allowedCategories.includes(categoryId)) {
+            console.log(`[Restriction catégorie] ${interaction.user.tag} a tenté d'utiliser /admit dans une catégorie non autorisée (ID: ${categoryId})`);
+            return interaction.reply({
+                content: 'Cette commande ne peut être utilisée que dans les catégories autorisées.',
                 ephemeral: true
             });
         }

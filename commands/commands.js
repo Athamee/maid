@@ -15,7 +15,10 @@ module.exports = {
     },
     restrictions: {
         allowedChannels: [], // Tous les salons autorisés
-        restrictedChannels: [] // Aucun salon interdit
+        restrictedChannels: [], // Aucun salon interdit
+        allowedCategories: [], // Toutes les catégories autorisées
+        restrictedCategories: [], // Aucune catégorie interdite
+        allowDM: true // Autorisé en DM
     },
 
     async execute(interaction) {
@@ -23,6 +26,11 @@ module.exports = {
         await interaction.deferReply();
 
         try {
+            // Vérifier si la commande est exécutée dans un serveur
+            if (!interaction.guild && !this.restrictions.allowDM) {
+                throw new Error('Cette commande ne peut pas être utilisée en DM.');
+            }
+
             // Charger les fichiers de commandes
             const commandsPath = path.join(__dirname);
             const commandFiles = (await fs.readdir(commandsPath)).filter(file => file.endsWith('.js'));
@@ -48,7 +56,7 @@ module.exports = {
                 // Rôles autorisés (noms lisibles, sans ping)
                 const roles = command.permissions?.roles?.length > 0 
                     ? command.permissions.roles.map(id => {
-                        const role = interaction.guild.roles.cache.get(id);
+                        const role = interaction.guild?.roles.cache.get(id);
                         return role ? role.name : 'Inconnu';
                     }).join(', ')
                     : 'Aucun';
@@ -63,26 +71,48 @@ module.exports = {
                     : 'Aucune';
 
                 // Salons (noms lisibles, sans ping)
-                const allowed = command.restrictions?.allowedChannels?.length > 0 
+                const allowedChannels = command.restrictions?.allowedChannels?.length > 0 
                     ? command.restrictions.allowedChannels.map(id => {
-                        const channel = interaction.guild.channels.cache.get(id);
+                        const channel = interaction.guild?.channels.cache.get(id);
                         return channel ? channel.name : 'Inconnu';
                     }).join(', ')
                     : 'Tous';
-                const restricted = command.restrictions?.restrictedChannels?.length > 0 
+                const restrictedChannels = command.restrictions?.restrictedChannels?.length > 0 
                     ? command.restrictions.restrictedChannels.map(id => {
-                        const channel = interaction.guild.channels.cache.get(id);
+                        const channel = interaction.guild?.channels.cache.get(id);
                         return channel ? channel.name : 'Inconnu';
                     }).join(', ')
                     : 'Aucun';
+
+                // Catégories (noms lisibles, sans ping)
+                const allowedCategories = command.restrictions?.allowedCategories?.length > 0 
+                    ? command.restrictions.allowedCategories.map(id => {
+                        const category = interaction.guild?.channels.cache.get(id);
+                        return category?.type === 4 ? category.name : 'Inconnu'; // Type 4 = GUILD_CATEGORY
+                    }).join(', ')
+                    : 'Toutes';
+                const restrictedCategories = command.restrictions?.restrictedCategories?.length > 0 
+                    ? command.restrictions.restrictedCategories.map(id => {
+                        const category = interaction.guild?.channels.cache.get(id);
+                        return category?.type === 4 ? category.name : 'Inconnu'; // Type 4 = GUILD_CATEGORY
+                    }).join(', ')
+                    : 'Aucune';
+
+                // Autorisation en DM
+                const allowDM = command.restrictions?.allowDM !== undefined 
+                    ? command.restrictions.allowDM ? 'Oui' : 'Non'
+                    : 'Oui';
 
                 embed.addFields({
                     name: `/${name}`,
                     value: `**Description** : ${description}\n` +
                            `**Rôles** : ${roles}\n` +
                            `**Permissions** : ${perms}\n` +
-                           `**Salons autorisés** : ${allowed}\n` +
-                           `**Salons restreints** : ${restricted}`,
+                           `**Salons autorisés** : ${allowedChannels}\n` +
+                           `**Salons restreints** : ${restrictedChannels}\n` +
+                           `**Catégories autorisées** : ${allowedCategories}\n` +
+                           `**Catégories restreintes** : ${restrictedCategories}\n` +
+                           `**Autorisé en DM** : ${allowDM}`,
                     inline: false
                 });
             }
