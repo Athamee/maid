@@ -53,7 +53,7 @@ module.exports = {
 
         // Définit le texte avec les mentions
         const messageContent = sender.id === target.id
-            ? `<@${sender.id}> se met une fessée !`
+            ? `<@${sender.id}> met une fessée !`
             : `<@${sender.id}> claque le Fiak de <@${target.id}> !`;
 
         // Log pour vérifier ce qui est envoyé
