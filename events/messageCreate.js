@@ -4,6 +4,18 @@ const { Client } = require('discord.js');
 const pool = require('../db');
 const path = require('path');
 
+// Liste des mots-clés et leurs réactions
+const reactionTriggers = {
+    'bonjour': '🌞',
+    'nuit': '🌠',
+    'salut': '😊',
+    'hello': '🙃',
+    'merci': '🙏',
+    'bravo': '👏',
+    'lol': '😂',
+    'cool': '😎'
+};
+
 // Configuration des images pour les montées de niveau
 const levelUpImages = {
     10: path.join(__dirname, '../img/level10.png'),
@@ -41,6 +53,13 @@ module.exports = {
         const userId = message.author.id;
         const logChannelId = process.env.LOG_MESSAGES_ID;
         const piloriChannelId = process.env.PILORI_CHANNEL_ID;
+
+        // Ajout des réactions automatiques
+        for (const [trigger, emoji] of Object.entries(reactionTriggers)) {
+            if (content.includes(trigger)) {
+                try { await message.react(emoji); } catch (error) { console.error(`Erreur réaction ${emoji} :`, error.stack); }
+            }
+        }
 
         try {
             // Récupérer les paramètres anti-spam et XP
