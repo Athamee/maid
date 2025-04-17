@@ -58,9 +58,20 @@ module.exports = {
                     { name: 'Galerie', value: 'roleadd4' },
                     { name: 'Torture', value: 'roleadd5' }
                 ))
-        // Métadonnées pour permissions : admin requis par défaut, MODO vérifié manuellement dans execute
+        // Métadonnées pour permissions et restrictions
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator) // Requiert les permissions d'administrateur
         .setDMPermission(false), // Désactive l'utilisation en messages privés
+
+    // Métadonnées lisibles par commands.js
+    permissions: {
+        roles: [process.env.MODO], // Rôle MODO autorisé
+        bitPermissions: [PermissionFlagsBits.Administrator] // Permissions Discord requises
+    },
+    restrictions: {
+        allowedChannels: [], // Aucun salon spécifique requis
+        restrictedChannels: [], // Aucun salon interdit
+        allowDM: false // Reflète setDMPermission(false)
+    },
 
     async execute(interaction) {
         console.log(`[Commande /admit] Exécutée par ${interaction.user.tag} (ID: ${interaction.user.id})`);
