@@ -1,3 +1,4 @@
+zhandlers/
 node_modules/
 .env
 technicals/
@@ -6,4 +7,3 @@ token.json
 clear_commands.js
 clear_commands_guild.js
 z.js
-handlers/
