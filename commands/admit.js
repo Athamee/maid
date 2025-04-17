@@ -57,11 +57,15 @@ module.exports = {
                     { name: 'DM', value: 'roleadd3' },
                     { name: 'Galerie', value: 'roleadd4' },
                     { name: 'Torture', value: 'roleadd5' }
-                )),
+                ))
+        // Métadonnées pour permissions : admin requis par défaut, MODO vérifié manuellement dans execute
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator) // Requiert les permissions d'administrateur
+        .setDMPermission(false), // Désactive l'utilisation en messages privés
 
     async execute(interaction) {
         console.log(`[Commande /admit] Exécutée par ${interaction.user.tag} (ID: ${interaction.user.id})`);
 
+        // Vérification des permissions : admin ou rôle MODO
         const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
         const hasModoRole = interaction.member.roles.cache.has(process.env.MODO);
         if (!isAdmin && !hasModoRole) {
