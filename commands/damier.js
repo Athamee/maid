@@ -21,7 +21,9 @@ module.exports = {
                 .setName('taille')
                 .setDescription('Taille du damier (par exemple, 4x4)')
                 .setRequired(true)
-        ),
+        )
+        // Autorise l'utilisation en DM
+        .setDMPermission(true),
 
     // Fonction exécutée quand la commande est utilisée
     async execute(interaction) {
@@ -116,7 +118,11 @@ module.exports = {
             const shuffleCarrés = carrés.sort(() => Math.random() - 0.5);
             console.log('Damier mélangé, génération des images...');
 
-            // Génère et envoie les images une par une
+            // Définit le nombre d'images par groupe
+            const groupSize = 5;
+            const attachments = [];
+
+            // Génère les images et les regroupe
             for (let i = 0; i < n; i++) {
                 context.drawImage(background, 0, 0, newWidth, newHeight);
                 for (let j = 0; j < shuffleCarrés.length; j++) {
@@ -129,9 +135,14 @@ module.exports = {
 
                 const buffer = await canvas.encode('png', { compressionLevel: 9, filters: canvas.PNG_FILTER_NONE });
                 const attachment = new AttachmentBuilder(buffer, { name: `damier_${i}.png` });
+                attachments.push(attachment);
 
-                await interaction.followUp({ files: [attachment] });
-                console.log(`Image ${i + 1}/${n} envoyée`);
+                // Envoie par groupe de 5 ou à la fin
+                if (attachments.length === groupSize || i === n - 1) {
+                    await interaction.followUp({ files: attachments });
+                    console.log(`Groupe d'images envoyé (${attachments.length}/${n})`);
+                    attachments.length = 0; // Réinitialise le tableau
+                }
             }
 
             console.log(`Fin de /damier pour ${interaction.user.tag}`);
