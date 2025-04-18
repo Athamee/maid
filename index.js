@@ -186,10 +186,44 @@ async function deployCommands() {
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     try {
         console.log('Déploiement des commandes...');
-        await rest.put(
-            Routes.applicationGuildCommands(process.env.ID_APP, process.env.GUILD_ID),
-            { body: commands }
-        );
+
+        // Sépare les commandes globales et spécifiques au serveur
+        const globalCommands = [];
+        const guildCommands = [];
+
+        for (const command of commands) {
+            // Ajoute /damier aux commandes globales, les autres au serveur
+            if (command.name === 'damier') {
+                globalCommands.push(command);
+            } else {
+                guildCommands.push(command);
+            }
+        }
+
+        // Supprime les commandes existantes pour éviter les conflits
+        await rest.put(Routes.applicationCommands(process.env.ID_APP), { body: [] });
+        console.log('Commandes globales supprimées.');
+        await rest.put(Routes.applicationGuildCommands(process.env.ID_APP, process.env.GUILD_ID), { body: [] });
+        console.log('Commandes du serveur supprimées.');
+
+        // Déploiement des commandes globales (ex. /damier)
+        if (globalCommands.length > 0) {
+            await rest.put(
+                Routes.applicationCommands(process.env.ID_APP),
+                { body: globalCommands }
+            );
+            console.log(`Commandes globales déployées : ${globalCommands.map(c => c.name).join(', ')}`);
+        }
+
+        // Déploiement des commandes spécifiques au serveur
+        if (guildCommands.length > 0) {
+            await rest.put(
+                Routes.applicationGuildCommands(process.env.ID_APP, process.env.GUILD_ID),
+                { body: guildCommands }
+            );
+            console.log(`Commandes du serveur déployées : ${guildCommands.map(c => c.name).join(', ')}`);
+        }
+
         console.log('Commandes déployées avec succès !');
     } catch (error) {
         console.error('Erreur lors du déploiement des commandes :', error.stack);
